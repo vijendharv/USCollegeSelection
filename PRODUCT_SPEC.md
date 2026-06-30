@@ -1,6 +1,6 @@
 # US College Selection — Product Specification
 
-**Version:** 0.4.0
+**Version:** 0.5.0
 **Status:** Initial draft  
 **Last updated:** 2026-06-30
 
@@ -99,10 +99,10 @@ Users must be able to add, edit, duplicate, and remove course rows and save a pa
 
 ### 7.1 Accepted inputs
 
-- PDF, including multi-page PDFs.
-- PNG, JPEG, and HEIC images.
-- DOCX.
-- Maximum upload size and page count must be configurable and stated before upload.
+- PDF only, including text-based and scanned PDFs.
+- Maximum 15 pages and 15 MB per transcript.
+- Reject encrypted or password-protected PDFs with a clear error.
+- State the accepted format and limits before upload.
 
 ### 7.2 Extracted information
 
@@ -154,10 +154,10 @@ The transcript parser must treat course rigor and GPA as related but separate da
 
 ### 8.1 Accepted inputs
 
-- PDF and DOCX.
-- PNG, JPEG, and HEIC images for scanned résumés.
-- Plain text pasted into the profile form.
-- Multi-page files within configurable upload limits.
+- PDF only, including text-based and scanned PDFs.
+- Maximum 6 pages and 10 MB per résumé.
+- Reject encrypted or password-protected PDFs with a clear error.
+- State the accepted format and limits before upload.
 
 ### 8.2 Extracted information
 
@@ -469,6 +469,7 @@ The MVP is complete when:
 16. Résumé evidence is shown as holistic context and cannot silently override the deterministic academic/selectivity classification.
 17. Manual entry supports multiple courses and subjects, partial records, edits, and unknown values without fabricating missing data.
 18. Transcript parsing preserves AP/Honors designations and reported GPA types, and the classifier never compares incompatible weighted and unweighted GPA values as if they were equivalent.
+19. Transcript and résumé uploads accept PDF only; transcripts enforce 15 pages/15 MB and résumés enforce 6 pages/10 MB.
 
 ## 19. Future enhancements
 

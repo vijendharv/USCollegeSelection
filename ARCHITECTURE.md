@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.3.0
+**Version:** 0.4.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -40,8 +40,7 @@ The MVP must work locally before any hosted infrastructure is introduced.
 | College database | DuckDB | Free embedded analytical database; handles bulk federal data efficiently |
 | Validation | Pydantic | Typed tool inputs, outputs, and internal models |
 | PDF parsing | `pypdf` | Extract text from text-based transcripts and résumés |
-| DOCX parsing | `python-docx` | Extract text and tables from Word files |
-| Image processing | Pillow and `pillow-heif` | Normalize common image and HEIC uploads |
+| PDF rendering | `pypdfium2` and Pillow | Render scanned PDF pages into images for OCR |
 | OCR | Tesseract with `pytesseract` | Local, open-source OCR with no per-page charge |
 | HTML parsing | `httpx` and Beautiful Soup | Fetch and parse official admissions pages when allowed |
 | Excel export | `openpyxl` | Create formatted `.xlsx` workbooks |
@@ -133,15 +132,17 @@ The two academic intake paths produce the same canonical student-profile schema.
 
 Processing sequence:
 
-1. Validate MIME type, extension, size, and page count.
+1. Verify the PDF file signature, MIME type, size, page count, and encryption state.
 2. Copy the upload into a random, session-scoped temporary directory.
-3. Extract embedded text from PDF or DOCX.
-4. Run OCR only when embedded text is absent or insufficient.
-5. Normalize lines, tables, dates, course names, grades, and activities while preserving the original values.
-6. Apply deterministic extraction rules.
-7. Return extracted fields with source page, confidence, and warnings.
-8. Require user confirmation before matching colleges.
-9. Delete temporary originals after confirmation or session expiration.
+3. Reject transcripts over 15 pages or 15 MB and résumés over 6 pages or 10 MB.
+4. Reject encrypted or password-protected PDFs with a clear user-facing error.
+5. Extract embedded text with `pypdf`.
+6. Render and OCR pages only when embedded text is absent or insufficient.
+7. Normalize lines, tables, dates, course names, grades, and activities while preserving the original values.
+8. Apply deterministic extraction rules.
+9. Return extracted fields with source page, confidence, and warnings.
+10. Require user confirmation before matching colleges.
+11. Delete temporary originals after confirmation or session expiration.
 
 Transcript extraction produces courses, grades, credits, GPA, rank, rigor, and grade trends. Résumé extraction produces activities, roles, dates, duration, time commitment, awards, work, service, projects, and skills.
 
@@ -289,7 +290,7 @@ USCollegeSelection/
 │   ├── server.py                 # ASGI and MCP entry point
 │   ├── config.py
 │   ├── tools/                    # MCP tool handlers
-│   ├── documents/                # PDF, DOCX, image, OCR, transcript, résumé
+│   ├── documents/                # PDF, OCR, transcript, and résumé parsing
 │   ├── colleges/                 # search, matching, classification, gap analysis
 │   ├── data/                     # downloads, normalization, DuckDB refresh
 │   ├── reports/                  # canonical report, PDF, and Excel renderers
@@ -334,7 +335,9 @@ Do not commit downloaded datasets, generated reports, uploads, the DuckDB file, 
 Minimum automated coverage:
 
 - document type, size, and malicious filename validation;
-- text PDF, scanned PDF, image, and DOCX extraction;
+- text-based and scanned PDF extraction;
+- rejection of non-PDF, encrypted, oversized, and over-page-limit uploads;
+- transcript limits of 15 pages/15 MB and résumé limits of 6 pages/10 MB;
 - transcript and résumé extraction against synthetic fixtures;
 - transcript legends and course codes that identify Honors, AP, IB, and dual-enrollment courses;
 - ambiguous `advanced` course titles that must remain `UNKNOWN` until confirmed;
@@ -377,7 +380,7 @@ Never place real student documents in the repository or test suite.
 
 ### Stage 2 — Documents
 
-- Add PDF and DOCX text extraction.
+- Add text-based and scanned PDF extraction.
 - Add image normalization and Tesseract OCR.
 - Add transcript and résumé confirmation UI.
 - Add privacy cleanup and file limits.
