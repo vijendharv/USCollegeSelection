@@ -1,14 +1,14 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.1.0
+**Version:** 0.2.0
 **Status:** Proposed MVP architecture
-**Last updated:** 2026-06-29
+**Last updated:** 2026-06-30
 
 ## 1. Architecture goal
 
 Build the smallest useful ChatGPT app that can:
 
-1. accept a student transcript and optional résumé;
+1. accept either a student transcript or manually entered grades and subjects, plus an optional résumé;
 2. confirm a structured student profile;
 3. search a local index of US colleges;
 4. produce deterministic Safety / Likely, Target, and Reach classifications;
@@ -84,9 +84,11 @@ The MCP server owns facts, validation, classification, and exports. ChatGPT owns
 
 Responsibilities:
 
+- choose transcript upload or manual academic entry;
 - select or upload a transcript and optional résumé;
+- add, edit, duplicate, and remove manual course rows;
 - show extraction progress and validation errors;
-- display extracted fields for confirmation;
+- display extracted or manually entered fields for confirmation;
 - collect preferences and optional budget;
 - invoke the college-list workflow;
 - render sortable and filterable results; and
@@ -109,10 +111,10 @@ The server validates every tool request with Pydantic and returns `structuredCon
 Recommended public tools:
 
 1. `analyze_student_documents`
-   - Inputs: transcript handle, optional résumé handle.
+   - Inputs: optional transcript handle and optional résumé handle.
    - Output: unconfirmed academic and activity profile with confidence and warnings.
 2. `confirm_student_profile`
-   - Inputs: reviewed extraction plus preferences.
+   - Inputs: reviewed extraction or manual academic record, plus preferences.
    - Output: canonical confirmed profile and session ID.
 3. `build_college_list`
    - Inputs: confirmed profile and requested result count.
@@ -123,7 +125,11 @@ Recommended public tools:
 
 One user command—“Build my college list and gap analysis”—can let ChatGPT call these tools in sequence. The UI can call the same tools explicitly as the user confirms each step.
 
-### 5.3 Document pipeline
+### 5.3 Academic intake pipeline
+
+The two academic intake paths produce the same canonical student-profile schema. A transcript is never required when sufficient information is entered manually.
+
+#### Transcript path
 
 Processing sequence:
 
@@ -140,6 +146,18 @@ Processing sequence:
 Transcript extraction produces courses, grades, credits, GPA, rank, rigor, and grade trends. Résumé extraction produces activities, roles, dates, duration, time commitment, awards, work, service, projects, and skills.
 
 The parser must never invent a value. Ambiguous values remain unconfirmed.
+
+#### Manual path
+
+The UI sends a structured academic record directly to `confirm_student_profile`. It supports:
+
+- any number of courses across school years and terms;
+- subject, course name, level, grade, grading scale, and credits;
+- completed, repeated, withdrawn, pass/fail, and in-progress courses;
+- optional GPA, rank, test scores, and grading notes; and
+- partial records with explicit unknown values.
+
+Validate field types and grade scales, but do not require GPA when course-level grades are available. Normalize manual and transcript-derived courses through the same code before matching. The confirmation screen shows completeness warnings and the effect of missing data on confidence.
 
 ### 5.4 College data pipeline
 
@@ -279,6 +297,8 @@ Minimum automated coverage:
 - document type, size, and malicious filename validation;
 - text PDF, scanned PDF, image, and DOCX extraction;
 - transcript and résumé extraction against synthetic fixtures;
+- manual entry with one course, many courses, mixed grade scales, partial records, and unknown fields;
+- equivalent normalization for the same record entered manually or extracted from a transcript;
 - no-value-invention tests for ambiguous documents;
 - deterministic classification snapshots;
 - category-count behavior when fewer than five defensible matches exist;
@@ -308,7 +328,7 @@ Never place real student documents in the repository or test suite.
 
 - Create Python project and schemas.
 - Import a small College Scorecard sample into DuckDB.
-- Accept manual profiles.
+- Build manual academic entry with repeatable course rows and partial-profile validation.
 - Implement deterministic classification and gap analysis.
 - Generate Excel and PDF reports.
 

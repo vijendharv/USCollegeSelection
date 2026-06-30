@@ -1,12 +1,12 @@
 # US College Selection — Product Specification
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 **Status:** Initial draft  
-**Last updated:** 2026-06-29
+**Last updated:** 2026-06-30
 
 ## 1. Product summary
 
-US College Selection is a ChatGPT app that turns a student's academic record, résumé, and preferences into a researched, explainable college shortlist. A student, parent, or counselor can upload a transcript and résumé or enter a profile manually, run one command, and receive:
+US College Selection is a ChatGPT app that turns a student's academic record, résumé, and preferences into a researched, explainable college shortlist. A student, parent, or counselor can upload a transcript or manually enter the student's grades and subjects, optionally add a résumé, run one command, and receive:
 
 - 5–10 defensible **Safety / Likely**, **Target**, and **Reach** schools per category when enough matches exist;
 - a comparison table with admissions, academic, cost, outcome, ranking, and deadline information;
@@ -40,23 +40,23 @@ The product is decision support, not an admissions predictor. It must never desc
 
 ## 5. Primary user journey
 
-1. The user uploads an unofficial transcript and, optionally, a student résumé, or chooses manual entry.
-2. The app extracts academic and activity information and asks the user to confirm or correct it.
-3. The user supplies preferences: residency, intended entry term, majors, geography, existing schools, and optional budget.
-4. The user runs a single action: **Build my college list and gap analysis**.
-5. The app searches the college universe, verifies matches, classifies candidates, and displays an interactive shortlist.
-6. The user pins, removes, replaces, sorts, and filters schools.
-7. The user downloads a printable PDF and a formatted Excel workbook.
+1. The user chooses either **Upload transcript** or **Enter academics manually**.
+2. For an upload, the app extracts academic information and asks the user to confirm or correct it. For manual entry, the user adds as many courses, subjects, grades, credits, and academic details as are available.
+3. The user optionally uploads a student résumé or enters activities manually, then confirms the extracted or entered information.
+4. The user supplies preferences: residency, intended entry term, majors, geography, existing schools, and optional budget.
+5. The user runs a single action: **Build my college list and gap analysis**.
+6. The app searches the college universe, verifies matches, classifies candidates, and displays an interactive shortlist.
+7. The user pins, removes, replaces, sorts, and filters schools.
+8. The user downloads a printable PDF and a formatted Excel workbook.
 
 ## 6. Student profile
 
 ### 6.1 Required fields
 
-- GPA and GPA scale.
-- Whether the GPA is weighted, unweighted, or unknown.
 - State of residence.
 - Intended entry year and term.
 - At least one intended major or broad field of study.
+- At least one academic input: GPA, class rank, test score, or one course with a subject and grade.
 
 ### 6.2 Optional fields
 
@@ -76,6 +76,24 @@ The product is decision support, not an admissions predictor. It must never desc
 - A student résumé containing activities, leadership, employment, service, projects, awards, and skills.
 
 Budget and test scores are optional. When budget is absent, cost must remain visible but must not filter or penalize schools. When test scores are absent or withheld, the app must use other supported data and lower confidence where appropriate.
+
+### 6.3 Manual academic entry
+
+Manual entry is a first-class alternative to transcript upload, not merely an error fallback.
+
+The user must be able to enter as much available information as needed, including:
+
+- cumulative GPA, GPA scale, and weighted/unweighted/unknown status;
+- school year and term;
+- subject area and course name;
+- course level, including regular, honors, AP, IB, or dual enrollment;
+- grade, grading scale, credits attempted, and credits earned;
+- repeated, withdrawn, pass/fail, or in-progress status;
+- class rank, class size, and percentile;
+- SAT, ACT, AP, and IB scores; and
+- free-form academic context or grading notes.
+
+Users must be able to add, edit, duplicate, and remove course rows and save a partial profile. Unknown fields remain blank; the app must not require users to invent values. Before analysis, the app summarizes the entered record and warns when missing information materially lowers classification confidence.
 
 ## 7. Transcript upload and extraction
 
@@ -417,7 +435,7 @@ The user-facing one-command action may orchestrate multiple tools internally. Lo
 
 The MVP is complete when:
 
-1. A user can upload a supported transcript and optional résumé or enter a profile manually.
+1. A user can choose transcript upload or manual academic entry; neither path requires the other.
 2. The user can review and correct all extracted academic and activity data before analysis.
 3. A profile can be submitted without a budget or test score.
 4. The system searches the eligible US college universe and normally returns 15–30 recommendations.
@@ -433,6 +451,7 @@ The MVP is complete when:
 14. Re-running against the same data and methodology produces the same classifications.
 15. The product never describes admission or affordability as guaranteed.
 16. Résumé evidence is shown as holistic context and cannot silently override the deterministic academic/selectivity classification.
+17. Manual entry supports multiple courses and subjects, partial records, edits, and unknown values without fabricating missing data.
 
 ## 19. Future enhancements
 
