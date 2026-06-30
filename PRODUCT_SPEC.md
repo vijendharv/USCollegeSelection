@@ -1,6 +1,6 @@
 # US College Selection — Product Specification
 
-**Version:** 0.3.0
+**Version:** 0.4.0
 **Status:** Initial draft  
 **Last updated:** 2026-06-30
 
@@ -110,12 +110,28 @@ The app should extract, when present:
 
 - cumulative GPA, GPA scale, and weighted/unweighted status;
 - course names, academic years, terms, grades, credits, and subject areas;
-- AP, IB, honors, dual-enrollment, and other advanced-course designations;
+- AP, IB, honors, dual-enrollment, and other advanced-course designations exactly as reported by the school;
 - class rank and class size;
 - school grading notes; and
 - grade trends and preparation in subjects related to the intended major.
 
-### 7.3 Verification requirements
+### 7.3 Course rigor and GPA weighting
+
+The transcript parser must treat course rigor and GPA as related but separate data.
+
+- Detect Honors, AP, IB, dual-enrollment, and other advanced levels from course titles, course codes, transcript legends, or explicit school labels.
+- Preserve the exact reported designation and record where it was found.
+- Do not infer that a course is Honors or AP solely because its title contains words such as `advanced`, `accelerated`, or `college prep`.
+- Flag uncertain course-level mappings for user confirmation.
+- Preserve every school-reported GPA value, its scale, and whether it is weighted, unweighted, or unspecified.
+- Never add AP or Honors points to a school-reported GPA.
+- Do not assume all high schools use the same AP, Honors, IB, or dual-enrollment weight.
+- If the app calculates an internal comparison GPA, label it clearly as app-calculated, publish the conversion rule, and retain the original GPA alongside it.
+- Compare weighted GPA only with a compatible weighted school benchmark and unweighted GPA only with an unweighted benchmark.
+- When the student's GPA type or the college benchmark type is unknown or incompatible, avoid a direct GPA-gap claim and reduce classification confidence.
+- Evaluate course rigor separately using the number, level, subject relevance, progression, and—when known—the advanced courses available at the student's school.
+
+### 7.4 Verification requirements
 
 - Show a review screen before extracted data can be used.
 - Let the user edit every extracted field.
@@ -125,7 +141,7 @@ The app should extract, when present:
 - Fall back to manual entry when extraction fails.
 - Explain that colleges may recalculate GPA differently.
 
-### 7.4 Privacy requirements
+### 7.5 Privacy requirements
 
 - Do not retain student ID, address, birth date, counselor information, or other identifiers that are unnecessary for analysis.
 - Redact detected unnecessary identifiers from stored derived data.
@@ -253,7 +269,7 @@ Classification must be produced by deterministic, versioned, testable applicatio
 - Overall acceptance rate.
 - Student GPA relative to a published admitted-student distribution.
 - SAT/ACT relative to published 25th, 50th, and 75th percentiles.
-- Class rank and course rigor when comparable data exist.
+- Class rank and course rigor when comparable data exist, with AP/Honors rigor evaluated separately from GPA weighting.
 - Residency advantage for public institutions when documented.
 - Test policy and the student's test-submission choice.
 - Major-specific selectivity when published by the institution.
@@ -436,7 +452,7 @@ The user-facing one-command action may orchestrate multiple tools internally. Lo
 The MVP is complete when:
 
 1. A user can choose transcript upload or manual academic entry; neither path requires the other.
-2. The user can review and correct all extracted academic and activity data before analysis.
+2. The user can review and correct all extracted or manually entered academic and activity data before analysis.
 3. A profile can be submitted without a budget or test score.
 4. The system searches the eligible US college universe and normally returns 15–30 recommendations.
 5. The system does not force five schools into a category when evidence is insufficient.
@@ -452,6 +468,7 @@ The MVP is complete when:
 15. The product never describes admission or affordability as guaranteed.
 16. Résumé evidence is shown as holistic context and cannot silently override the deterministic academic/selectivity classification.
 17. Manual entry supports multiple courses and subjects, partial records, edits, and unknown values without fabricating missing data.
+18. Transcript parsing preserves AP/Honors designations and reported GPA types, and the classifier never compares incompatible weighted and unweighted GPA values as if they were equivalent.
 
 ## 19. Future enhancements
 

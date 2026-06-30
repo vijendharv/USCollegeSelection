@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -137,7 +137,7 @@ Processing sequence:
 2. Copy the upload into a random, session-scoped temporary directory.
 3. Extract embedded text from PDF or DOCX.
 4. Run OCR only when embedded text is absent or insufficient.
-5. Normalize lines, tables, dates, course names, grades, and activities.
+5. Normalize lines, tables, dates, course names, grades, and activities while preserving the original values.
 6. Apply deterministic extraction rules.
 7. Return extracted fields with source page, confidence, and warnings.
 8. Require user confirmation before matching colleges.
@@ -146,6 +146,37 @@ Processing sequence:
 Transcript extraction produces courses, grades, credits, GPA, rank, rigor, and grade trends. Résumé extraction produces activities, roles, dates, duration, time commitment, awards, work, service, projects, and skills.
 
 The parser must never invent a value. Ambiguous values remain unconfirmed.
+
+Each parsed course uses fields such as:
+
+```text
+course_name
+subject
+academic_year
+term
+grade_original
+grade_scale
+credits
+course_level: REGULAR | HONORS | AP | IB | DUAL_ENROLLMENT | OTHER | UNKNOWN
+course_level_original
+course_level_source: TITLE | CODE | LEGEND | USER_CONFIRMED
+course_level_confidence
+```
+
+Course-level detection follows explicit transcript evidence. A school-specific legend or course-code mapping takes precedence over title matching. Words such as `advanced` or `accelerated` do not automatically mean Honors, and the parser must not convert a course to AP without an explicit AP designation.
+
+Represent GPA values as a list rather than one universal number:
+
+```text
+value
+scale
+type: WEIGHTED | UNWEIGHTED | UNKNOWN
+scope: CUMULATIVE | YEAR | TERM | CORE
+source: TRANSCRIPT | MANUAL | APP_CALCULATED
+conversion_rule_version
+```
+
+Never modify a reported GPA by adding AP or Honors points. Any optional app-calculated comparison GPA is stored separately, is reproducible from a versioned conversion rule, and is never presented as the high school's GPA.
 
 #### Manual path
 
@@ -217,6 +248,14 @@ methodology_version: 1
 ```
 
 Résumé information contributes only to the separate fit score and holistic context. It cannot silently override the academic/selectivity category.
+
+GPA comparison rules:
+
+- compare weighted values only when both student and college benchmark use a compatible weighted scale;
+- compare unweighted values only with unweighted benchmarks;
+- do not calculate a numeric GPA gap when the benchmark type or scale is unknown;
+- lower confidence when compatible GPA data are unavailable; and
+- score rigor separately from GPA using confirmed course levels, subject relevance, progression, and known school-course availability.
 
 ### 5.6 Report generator
 
@@ -297,6 +336,10 @@ Minimum automated coverage:
 - document type, size, and malicious filename validation;
 - text PDF, scanned PDF, image, and DOCX extraction;
 - transcript and résumé extraction against synthetic fixtures;
+- transcript legends and course codes that identify Honors, AP, IB, and dual-enrollment courses;
+- ambiguous `advanced` course titles that must remain `UNKNOWN` until confirmed;
+- weighted, unweighted, unknown, and multiple reported GPA values;
+- prevention of weighted-to-unweighted GPA comparisons;
 - manual entry with one course, many courses, mixed grade scales, partial records, and unknown fields;
 - equivalent normalization for the same record entered manually or extracted from a transcript;
 - no-value-invention tests for ambiguous documents;
