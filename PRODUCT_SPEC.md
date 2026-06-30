@@ -1,12 +1,12 @@
 # US College Selection — Product Specification
 
-**Version:** 0.1.0  
+**Version:** 0.2.0
 **Status:** Initial draft  
 **Last updated:** 2026-06-29
 
 ## 1. Product summary
 
-US College Selection is a ChatGPT app that turns a student's academic record and preferences into a researched, explainable college shortlist. A student, parent, or counselor can upload a transcript or enter a profile manually, run one command, and receive:
+US College Selection is a ChatGPT app that turns a student's academic record, résumé, and preferences into a researched, explainable college shortlist. A student, parent, or counselor can upload a transcript and résumé or enter a profile manually, run one command, and receive:
 
 - 5–10 defensible **Safety / Likely**, **Target**, and **Reach** schools per category when enough matches exist;
 - a comparison table with admissions, academic, cost, outcome, ranking, and deadline information;
@@ -40,8 +40,8 @@ The product is decision support, not an admissions predictor. It must never desc
 
 ## 5. Primary user journey
 
-1. The user uploads an unofficial transcript or chooses manual entry.
-2. The app extracts academic information and asks the user to confirm or correct it.
+1. The user uploads an unofficial transcript and, optionally, a student résumé, or chooses manual entry.
+2. The app extracts academic and activity information and asks the user to confirm or correct it.
 3. The user supplies preferences: residency, intended entry term, majors, geography, existing schools, and optional budget.
 4. The user runs a single action: **Build my college list and gap analysis**.
 5. The app searches the college universe, verifies matches, classifies candidates, and displays an interactive shortlist.
@@ -73,6 +73,7 @@ The product is decision support, not an admissions predictor. It must never desc
 - Existing college list.
 - Early Decision or Early Action preferences.
 - Extracurricular strength and relevant special circumstances.
+- A student résumé containing activities, leadership, employment, service, projects, awards, and skills.
 
 Budget and test scores are optional. When budget is absent, cost must remain visible but must not filter or penalize schools. When test scores are absent or withheld, the app must use other supported data and lower confidence where appropriate.
 
@@ -115,7 +116,61 @@ The app should extract, when present:
 - Define and publish a short default retention period.
 - Do not use transcript contents for model training or unrelated analytics.
 
-## 8. College universe and matching
+## 8. Résumé upload and extraction
+
+### 8.1 Accepted inputs
+
+- PDF and DOCX.
+- PNG, JPEG, and HEIC images for scanned résumés.
+- Plain text pasted into the profile form.
+- Multi-page files within configurable upload limits.
+
+### 8.2 Extracted information
+
+The app should extract, when present:
+
+- extracurricular activities and participation dates;
+- leadership roles and scope of responsibility;
+- volunteer and community-service work;
+- paid employment, internships, and family responsibilities;
+- awards, honors, publications, certifications, and competitions;
+- research, technical, creative, entrepreneurial, and independent projects;
+- athletics, arts, clubs, and other sustained interests;
+- skills, languages, and tools; and
+- time commitment, duration, progression, and measurable outcomes.
+
+The app may organize activities into themes related to intended majors and student interests, but it must preserve the student's original facts and wording for verification.
+
+### 8.3 Verification and interpretation
+
+- Show all extracted activities on a review screen before using them.
+- Let the user correct titles, dates, time commitments, roles, and descriptions.
+- Detect likely duplicates without silently merging them.
+- Flag vague, contradictory, or implausible information for user review rather than rejecting it automatically.
+- Never invent impact metrics, hours, awards, selectivity, or leadership scope.
+- Treat résumé formatting quality as irrelevant to admissions classification.
+- Allow users without a résumé to enter activities manually or skip this section.
+
+### 8.4 Use in recommendations
+
+Confirmed résumé information may be used to:
+
+- identify alignment with intended majors and distinctive campus programs;
+- surface relevant honors programs, research opportunities, clubs, and experiential learning;
+- describe sustained interests, leadership, initiative, service, work, and responsibilities;
+- identify gaps or opportunities in the holistic profile; and
+- personalize application-strategy suggestions.
+
+Résumé content must not be converted into a fabricated numerical admissions advantage. Because colleges rarely publish comparable extracurricular benchmarks, the app must keep the academic/selectivity classification separate from a **holistic context** assessment. Résumé evidence may add context to a classification explanation but must not silently move a school from Reach to Target or from Target to Safety / Likely.
+
+### 8.5 Privacy
+
+- Apply the transcript privacy, retention, encryption, and deletion requirements to résumés.
+- Ignore and redact unnecessary addresses, phone numbers, personal email addresses, references, and social-media identifiers.
+- Do not contact organizations, employers, recommenders, or other people named in the résumé.
+- Do not attempt to verify private résumé claims through web searches without explicit user consent.
+
+## 9. College universe and matching
 
 The initial college universe consists of accredited, US, bachelor’s-granting institutions that admit first-year undergraduates.
 
@@ -132,9 +187,9 @@ The system must:
 
 Hard filters and soft preferences must be visibly different. The app must ask for confirmation before treating an ambiguous preference as a hard exclusion.
 
-## 9. Recommendation results
+## 10. Recommendation results
 
-### 9.1 Default table columns
+### 10.1 Default table columns
 
 1. Institution.
 2. Safety / Likely, Target, Reach, or Insufficient Data.
@@ -147,7 +202,7 @@ Hard filters and soft preferences must be visibly different. The app must ask fo
 9. Tuition, total cost of attendance, and net price.
 10. Application deadlines.
 
-### 9.2 Optional columns
+### 10.2 Optional columns
 
 - Graduation and retention rates.
 - Enrollment and student-to-faculty ratio.
@@ -159,7 +214,7 @@ Hard filters and soft preferences must be visibly different. The app must ask fo
 - Campus setting and distance from home.
 - Data year, source, and last-verified date.
 
-### 9.3 Interactions
+### 10.3 Interactions
 
 Users must be able to:
 
@@ -171,11 +226,11 @@ Users must be able to:
 - open source and admissions pages; and
 - regenerate recommendations without losing pinned schools.
 
-## 10. Classification methodology
+## 11. Classification methodology
 
 Classification must be produced by deterministic, versioned, testable application code. The language model may explain results but must not invent or silently override the classification.
 
-### 10.1 Supported factors
+### 11.1 Supported factors
 
 - Overall acceptance rate.
 - Student GPA relative to a published admitted-student distribution.
@@ -189,7 +244,7 @@ Classification must be produced by deterministic, versioned, testable applicatio
 
 Race, ethnicity, gender, disability, religion, and other protected traits must not be used to estimate admission likelihood.
 
-### 10.2 Category definitions
+### 11.2 Category definitions
 
 - **Safety / Likely:** The student is at or above the institution's typical academic profile, the overall admit rate is reasonably high, no known major restriction materially increases risk, and the supporting data are sufficiently complete.
 - **Target:** The student is within the typical admitted-student profile without an overriding selectivity or major constraint.
@@ -198,7 +253,7 @@ Race, ethnicity, gender, disability, religion, and other protected traits must n
 
 Highly selective institutions remain Reach even for students above their published academic ranges. A missing value must lower confidence; it must never be treated as favorable evidence.
 
-### 10.3 Explainability
+### 11.3 Explainability
 
 Every classification must expose:
 
@@ -209,7 +264,7 @@ Every classification must expose:
 - source year and URL; and
 - a plain-language explanation and confidence level.
 
-## 11. Gap analysis
+## 12. Gap analysis
 
 The app must generate a section for every recommended and user-entered school.
 
@@ -225,6 +280,7 @@ Each comparison row contains:
 The report must also include:
 
 - academic strengths;
+- résumé-derived themes, relevant experiences, and holistic context;
 - material gaps and unknown factors;
 - grade trajectory and core-subject preparation;
 - intended-major preparation and missing recommended coursework;
@@ -233,7 +289,7 @@ The report must also include:
 - source links, source years, and verification dates; and
 - generation timestamp, methodology version, and disclaimer.
 
-## 12. Cost and affordability
+## 13. Cost and affordability
 
 The product must distinguish among:
 
@@ -247,9 +303,9 @@ The product must distinguish among:
 
 A school must not be called affordable based only on tuition or average net price. Student-specific estimates must be labeled as estimates and should link to the institution's official net-price calculator where available.
 
-## 13. Data sources and freshness
+## 14. Data sources and freshness
 
-### 13.1 Source hierarchy
+### 14.1 Source hierarchy
 
 1. US Department of Education College Scorecard and NCES IPEDS for identity, admissions, cost, aid, completion, and outcomes.
 2. Official institution admissions and financial-aid pages for current deadlines, testing policies, costs, and program requirements.
@@ -258,7 +314,7 @@ A school must not be called affordable based only on tuition or average net pric
 
 The MVP should use a transparent internal **fit rank** rather than scrape or republish proprietary rankings.
 
-### 13.2 Freshness rules
+### 14.2 Freshness rules
 
 - Store the source URL, data period, retrieval date, and last verification date for each field.
 - Label federal annual data as “latest available,” not “live.”
@@ -268,9 +324,9 @@ The MVP should use a transparent internal **fit rank** rather than scrape or rep
 - Display conflicts and unresolved discrepancies.
 - Never fabricate missing GPA, rank, deadline, cost, or major-selectivity data.
 
-## 14. Reports and downloads
+## 15. Reports and downloads
 
-### 14.1 Printable PDF
+### 15.1 Printable PDF
 
 The PDF must:
 
@@ -280,13 +336,13 @@ The PDF must:
 - include source links, generation date, and methodology version; and
 - match the final on-screen results.
 
-### 14.2 Excel workbook
+### 15.2 Excel workbook
 
 The app must generate a formatted `.xlsx` workbook containing:
 
 1. **College List** — all selected and user-entered schools, classification, confidence, fit rank, admissions, cost, outcomes, deadlines, and links.
 2. **Gap Analysis** — student-versus-school measures, gaps, statuses, and sources.
-3. **Student Profile** — confirmed manual inputs and transcript-derived academic summary.
+3. **Student Profile** — confirmed manual inputs, transcript-derived academic summary, and résumé-derived activity summary.
 4. **Application Tracker** — school, plan, deadline, status, fee, supplements, and notes.
 5. **Sources & Methodology** — source URLs, data years, verification dates, classification rules, and methodology version.
 
@@ -302,18 +358,19 @@ Workbook requirements:
 - generation timestamp and methodology version; and
 - exact agreement with the on-screen and PDF results.
 
-## 15. ChatGPT app and tool requirements
+## 16. ChatGPT app and tool requirements
 
 The app should use the OpenAI Apps SDK architecture:
 
 - an MCP server exposing typed tools;
-- a web component for transcript upload, profile confirmation, results, and exports; and
+- a web component for transcript and résumé upload, profile confirmation, results, and exports; and
 - structured tool results so the model, UI, PDF exporter, and Excel exporter use the same canonical data.
 
 Recommended MCP tools:
 
 - `create_student_profile`
 - `parse_transcript`
+- `parse_resume`
 - `confirm_student_profile`
 - `search_colleges`
 - `classify_colleges`
@@ -323,7 +380,7 @@ Recommended MCP tools:
 
 The user-facing one-command action may orchestrate multiple tools internally. Long-running steps should report progress and partial failure without discarding successful results.
 
-## 16. Nonfunctional requirements
+## 17. Nonfunctional requirements
 
 ### Performance and reliability
 
@@ -356,12 +413,12 @@ The user-facing one-command action may orchestrate multiple tools internally. Lo
 - Alert on stale deadline data and large source-to-source discrepancies.
 - Keep an audit record sufficient to reproduce a generated report.
 
-## 17. Acceptance criteria for the MVP
+## 18. Acceptance criteria for the MVP
 
 The MVP is complete when:
 
-1. A user can upload a supported transcript or enter a profile manually.
-2. The user can review and correct all extracted academic data before analysis.
+1. A user can upload a supported transcript and optional résumé or enter a profile manually.
+2. The user can review and correct all extracted academic and activity data before analysis.
 3. A profile can be submitted without a budget or test score.
 4. The system searches the eligible US college universe and normally returns 15–30 recommendations.
 5. The system does not force five schools into a category when evidence is insufficient.
@@ -375,8 +432,9 @@ The MVP is complete when:
 13. Excel output contains all five required sheets and matches the UI and PDF.
 14. Re-running against the same data and methodology produces the same classifications.
 15. The product never describes admission or affordability as guaranteed.
+16. Résumé evidence is shown as holistic context and cannot silently override the deterministic academic/selectivity classification.
 
-## 18. Future enhancements
+## 19. Future enhancements
 
 - Counselor workspaces and multi-student portfolio views.
 - Saved profiles, version history, and application-status reminders.
@@ -387,9 +445,8 @@ The MVP is complete when:
 - Licensed external rankings selectable by methodology.
 - Direct admissions and automatic-admission eligibility.
 
-## 19. Reference sources
+## 20. Reference sources
 
 - [OpenAI Apps SDK quickstart](https://developers.openai.com/apps-sdk/quickstart)
 - [NCES IPEDS Data Center](https://nces.ed.gov/ipeds/datacenter/Default.aspx)
 - [College Scorecard data](https://collegescorecard.ed.gov/data/)
-
