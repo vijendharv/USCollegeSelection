@@ -1,0 +1,26 @@
+# Milestone implementation records
+
+This directory records what was actually delivered in each milestone. The architecture document describes the plan; these records describe the implementation that reached `main`.
+
+Each completed milestone should document:
+
+- its objective and status;
+- delivered behavior and important files;
+- design decisions and tradeoffs;
+- verification performed;
+- intentionally deferred work; and
+- the pull request that introduced it.
+
+## Stage 1
+
+| Milestone | Status | Implementation record |
+|---|---|---|
+| 1.1 Project foundation | Complete | [1.1 Project foundation](1.1-project-foundation.md) |
+| 1.2 Student profile and manual academics | Not started | — |
+| 1.3 College data slice | Not started | — |
+| 1.4 Classification engine v1 | Not started | — |
+| 1.5 Gap analysis and report model | Not started | — |
+| 1.6 PDF and Excel exports | Not started | — |
+| 1.7 Offline end-to-end demo | Not started | — |
+
+Use [TEMPLATE.md](TEMPLATE.md) when completing the next milestone.

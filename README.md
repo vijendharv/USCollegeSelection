@@ -51,3 +51,4 @@ The command creates configured local data and session directories when needed an
 
 - [Product specification](PRODUCT_SPEC.md)
 - [Architecture](ARCHITECTURE.md)
+- [Milestone implementation records](docs/milestones/README.md)
