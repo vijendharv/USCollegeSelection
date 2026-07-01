@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.4.0
+**Version:** 0.5.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -372,11 +372,94 @@ Never place real student documents in the repository or test suite.
 
 ### Stage 1 — Offline vertical slice
 
-- Create Python project and schemas.
-- Import a small College Scorecard sample into DuckDB.
-- Build manual academic entry with repeatable course rows and partial-profile validation.
-- Implement deterministic classification and gap analysis.
-- Generate Excel and PDF reports.
+Stage 1 is divided into milestones that can be implemented, tested, and reviewed independently:
+
+```mermaid
+flowchart LR
+    M1["1.1 Project foundation"] --> M2["1.2 Student profile"]
+    M2 --> M3["1.3 College data slice"]
+    M3 --> M4["1.4 Classification"]
+    M4 --> M5["1.5 Gap analysis"]
+    M5 --> M6["1.6 PDF and Excel"]
+    M6 --> M7["1.7 Offline demo"]
+```
+
+#### Milestone 1.1 — Project foundation
+
+Deliverables:
+
+- Create the Python package, `pyproject.toml`, and application directory structure.
+- Add configuration, structured logging, and a local health command.
+- Configure Ruff, mypy, and pytest.
+- Add `.gitignore` rules for datasets, DuckDB files, uploads, reports, and secrets.
+
+Complete when a clean checkout can install dependencies and pass an initial test suite with one documented command.
+
+#### Milestone 1.2 — Student profile and manual academics
+
+Deliverables:
+
+- Define Pydantic schemas for student preferences, GPA variants, tests, courses, grades, and course rigor.
+- Support repeatable manual course rows and partial academic records.
+- Preserve weighted, unweighted, unknown, and app-calculated GPA values separately.
+- Return validation and completeness warnings without inventing missing values.
+
+Complete when synthetic profiles covering a single course, multiple terms, AP/Honors courses, mixed GPA types, and missing fields validate predictably.
+
+#### Milestone 1.3 — College data slice
+
+Deliverables:
+
+- Define the initial DuckDB schema and dataset-version metadata.
+- Import a small, committed synthetic fixture plus a reproducible sample from College Scorecard.
+- Implement institution lookup, basic filters, cost fields, admissions fields, and source metadata.
+- Add a refresh command that replaces sample tables atomically.
+
+Complete when tests can build a fresh database and query the expected sample institutions without network access.
+
+#### Milestone 1.4 — Classification engine v1
+
+Deliverables:
+
+- Implement deterministic Safety / Likely, Target, Reach, and Insufficient Data rules.
+- Compare only compatible GPA types and scales.
+- Evaluate confirmed course rigor separately from GPA weighting.
+- Return confidence, triggered rules, missing inputs, methodology version, and source dates.
+
+Complete when a versioned test matrix covers category boundaries, highly selective schools, incompatible GPA data, and missing benchmarks.
+
+#### Milestone 1.5 — Gap analysis and report model
+
+Deliverables:
+
+- Create one canonical report model shared by every output format.
+- Compare student academics, cost preference, and available school benchmarks.
+- Produce strengths, gaps, unknowns, warnings, and source references.
+- Include user-entered schools even when they fail matching preferences.
+
+Complete when a saved report fixture contains reproducible results for at least one school in every classification category.
+
+#### Milestone 1.6 — PDF and Excel exports
+
+Deliverables:
+
+- Generate the five-sheet Excel workbook with formatting, filters, links, and injection-safe text.
+- Generate a printable PDF from the same canonical report model.
+- Include generation time, methodology version, data years, and source links.
+- Verify that PDF, Excel, and canonical report values agree.
+
+Complete when automated tests inspect workbook structure, PDF text, and cross-format consistency.
+
+#### Milestone 1.7 — Offline end-to-end demo
+
+Deliverables:
+
+- Add one CLI command that accepts a fixture or manual-profile JSON file.
+- Build the sample DuckDB database when needed.
+- Generate a classified college list, gap analysis, PDF, and Excel workbook.
+- Document setup, demo usage, limitations, and expected output.
+
+Complete when a clean checkout can run the documented offline demo without paid services, private student data, or network access after dependencies are installed.
 
 ### Stage 2 — Documents
 
