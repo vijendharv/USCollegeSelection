@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Downloaded and generated data
+data/raw/
+data/*.duckdb
+data/*.duckdb.*
+uploads/
+reports/
+sessions/
+
+# Frontend artifacts
+node_modules/
+web/dist/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
