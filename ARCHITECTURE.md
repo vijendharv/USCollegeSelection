@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -66,16 +66,20 @@ flowchart LR
     C <--> W["Embedded app UI"]
     C -->|"MCP tool calls"| S["Python MCP server"]
     W -->|"File handles and tool calls"| S
-    S --> D["Document parser + OCR"]
-    S --> E["Matching + classification engine"]
-    S --> R["Report generator"]
-    E <--> DB["DuckDB college index"]
-    DB <-->|"Scheduled/manual refresh"| F["College Scorecard, IPEDS, official college pages"]
+    S --> A["Application services"]
+    A --> D["Document parser + OCR"]
+    A --> E["Matching + classification engine"]
+    A --> R["Report generator"]
+    A --> N["Networking layer"]
+    A --> T["Storage layer"]
+    N --> F["College Scorecard, IPEDS, official college pages"]
+    T <--> DB["DuckDB college index"]
+    T <--> FS["Temporary session files"]
     R --> X["PDF and XLSX files"]
     X --> W
 ```
 
-The MCP server owns facts, validation, classification, and exports. ChatGPT owns conversation, orchestration, and plain-language explanation. The embedded UI owns uploads, profile confirmation, tables, filters, and download buttons.
+The MCP server owns facts, validation, classification, and exports. ChatGPT owns conversation, orchestration, and plain-language explanation. The embedded UI owns uploads, profile confirmation, tables, filters, and download buttons. All external HTTP access passes through the networking layer, and all database or filesystem access passes through the storage layer.
 
 ## 5. Components
 
@@ -124,7 +128,46 @@ Recommended public tools:
 
 One user command—“Build my college list and gap analysis”—can let ChatGPT call these tools in sequence. The UI can call the same tools explicitly as the user confirms each step.
 
-### 5.3 Academic intake pipeline
+### 5.3 Networking layer
+
+The networking layer is the only application package allowed to make outbound HTTP requests.
+
+It provides a few concrete operations:
+
+```text
+download_file(url, destination)
+get_text(url)
+get_json(url)
+```
+
+Responsibilities:
+
+- configure timeouts, retries, redirects, and the application user agent;
+- stream large federal dataset downloads to disk;
+- enforce allowed schemes and maximum response sizes;
+- return response metadata such as status, URL, ETag, and retrieval time; and
+- raise small, application-specific network errors.
+
+The layer uses `httpx` internally. College parsing, classification, report generation, and MCP handlers must not import `httpx` or make requests directly.
+
+### 5.4 Storage layer
+
+The storage layer is the only application package allowed to open DuckDB or manage session files.
+
+It contains two concrete components:
+
+```text
+CollegeStore      # public college data in DuckDB
+SessionFileStore  # temporary uploads and generated reports
+```
+
+`CollegeStore` handles connections, transactions, schema creation, atomic refreshes, and read-only application queries. `SessionFileStore` creates random session directories, enforces paths and expiration, and deletes uploads and reports.
+
+The rest of the application works with Pydantic models and ordinary method calls rather than SQL, DuckDB connections, or raw paths. Student data never enters `CollegeStore`.
+
+This is intentionally not a generic repository framework: there are two implementations, no dependency-injection container, and no storage plug-in system. Tests may substitute small in-memory fakes where useful.
+
+### 5.5 Academic intake pipeline
 
 The two academic intake paths produce the same canonical student-profile schema. A transcript is never required when sufficient information is entered manually.
 
@@ -191,7 +234,7 @@ The UI sends a structured academic record directly to `confirm_student_profile`.
 
 Validate field types and grade scales, but do not require GPA when course-level grades are available. Normalize manual and transcript-derived courses through the same code before matching. The confirmation screen shows completeness warnings and the effect of missing data on confidence.
 
-### 5.4 College data pipeline
+### 5.6 College data pipeline
 
 Use free public data:
 
@@ -221,7 +264,7 @@ Do not fetch thousands of colleges during a user request. Search the local datab
 
 If a current deadline cannot be verified, return the official admissions link and mark the deadline `Unknown — verify with institution`.
 
-### 5.5 Matching and classification engine
+### 5.7 Matching and classification engine
 
 The engine is ordinary Python code, not an LLM prompt.
 
@@ -258,7 +301,7 @@ GPA comparison rules:
 - lower confidence when compatible GPA data are unavailable; and
 - score rigor separately from GPA using confirmed course levels, subject relevance, progression, and known school-course availability.
 
-### 5.6 Report generator
+### 5.8 Report generator
 
 Create a single canonical report model, then render both formats from it:
 
@@ -290,9 +333,11 @@ USCollegeSelection/
 │   ├── server.py                 # ASGI and MCP entry point
 │   ├── config.py
 │   ├── tools/                    # MCP tool handlers
+│   ├── networking/               # all outbound HTTP and downloads
+│   ├── storage/                  # DuckDB and temporary file access
 │   ├── documents/                # PDF, OCR, transcript, and résumé parsing
 │   ├── colleges/                 # search, matching, classification, gap analysis
-│   ├── data/                     # downloads, normalization, DuckDB refresh
+│   ├── data/                     # source mapping and normalization
 │   ├── reports/                  # canonical report, PDF, and Excel renderers
 │   ├── models/                   # Pydantic schemas
 │   └── security/                 # validation, redaction, cleanup
@@ -334,6 +379,9 @@ Do not commit downloaded datasets, generated reports, uploads, the DuckDB file, 
 
 Minimum automated coverage:
 
+- networking timeouts, retries, response limits, and download metadata using mocked HTTP responses;
+- storage schema creation, transactions, read-only queries, path safety, and session cleanup;
+- a guard test that prevents `httpx` and `duckdb` imports outside their designated layers;
 - document type, size, and malicious filename validation;
 - text-based and scanned PDF extraction;
 - rejection of non-PDF, encrypted, oversized, and over-page-limit uploads;
@@ -390,6 +438,7 @@ Deliverables:
 
 - Create the Python package, `pyproject.toml`, and application directory structure.
 - Add configuration, structured logging, and a local health command.
+- Add the small networking and storage layer boundaries with test doubles.
 - Configure Ruff, mypy, and pytest.
 - Add `.gitignore` rules for datasets, DuckDB files, uploads, reports, and secrets.
 
@@ -411,11 +460,11 @@ Complete when synthetic profiles covering a single course, multiple terms, AP/Ho
 Deliverables:
 
 - Define the initial DuckDB schema and dataset-version metadata.
-- Import a small, committed synthetic fixture plus a reproducible sample from College Scorecard.
+- Download and import the latest complete real College Scorecard institution dataset through the networking and storage layers.
 - Implement institution lookup, basic filters, cost fields, admissions fields, and source metadata.
-- Add a refresh command that replaces sample tables atomically.
+- Add a refresh command that validates and replaces the real-data tables atomically.
 
-Complete when tests can build a fresh database and query the expected sample institutions without network access.
+Complete when the refresh command builds a validated database of eligible four-year institutions and tests can query a small frozen public-data fixture without network access.
 
 #### Milestone 1.4 — Classification engine v1
 
