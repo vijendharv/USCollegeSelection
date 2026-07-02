@@ -433,6 +433,7 @@ flowchart LR
     M4 --> M5["1.5 Gap analysis"]
     M5 --> M6["1.6 PDF and Excel"]
     M6 --> M7["1.7 Offline demo"]
+    M7 --> M8["1.8 Fit-ranked shortlist"]
 ```
 
 #### Milestone 1.1 — Project foundation
@@ -527,6 +528,22 @@ Deliverables:
 Complete when a clean checkout can perform one explicit real-data refresh and then run the documented demo locally without cloud hosting, paid services, private student data, or further network access. A frozen public fixture remains available only as an explicit automated-test mode.
 
 The demo scans the local institution database, applies confirmed geographic preferences while retaining user-entered schools, classifies all matches, and returns up to ten schools per defensible category. It writes the canonical JSON report and matching PDF/XLSX files to a private local session directory. It never calls the networking layer; if the real database is absent, it instructs the user to run `refresh-data` rather than silently substituting test data.
+
+#### Milestone 1.8 — Fit-ranked shortlist and holistic alignment
+
+Deliverables:
+
+- Replace first-in-database category truncation with a deterministic, versioned fit rank.
+- Rank schools independently within Safety / Likely, Target, Reach, and Insufficient Data without changing their admissions classifications.
+- Add free federal program-of-study data using CIP codes so intended-major availability is a real school-specific signal.
+- Represent confirmed résumé themes as structured holistic context rather than unscored prose.
+- Use résumé themes only for program and opportunity alignment; never convert them into an invented admissions boost.
+- Include component scores, missing inputs, score version, and a plain-language ranking explanation in JSON, PDF, and Excel.
+- Preserve user-entered schools even when they fall outside the category cap or matching preferences.
+
+The initial fit rank uses only transparent signals supported by free data: academic position within published ranges, intended-major availability, graduation and retention outcomes, earnings context, stated cost and geography preferences, data completeness, and alignment between confirmed student themes and offered fields of study. It does not claim to reproduce a proprietary national ranking or compare extracurricular strength against an unpublished admitted-student benchmark.
+
+Complete when input order cannot affect shortlist order, the highest fit-ranked schools are selected within each category, every score is reproducible and explainable, résumé context cannot change a category, and missing data remains visible rather than being silently treated as zero.
 
 ### Stage 2 — Documents
 
