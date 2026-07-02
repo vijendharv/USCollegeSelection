@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.models import (
@@ -18,7 +19,7 @@ from app.models import (
     StudentProfile,
 )
 
-FIT_METHODOLOGY_VERSION = "1.0"
+FIT_METHODOLOGY_VERSION = "1.1"
 
 _WEIGHTS = {
     "Academic fit": Decimal("30"),
@@ -28,24 +29,42 @@ _WEIGHTS = {
     "Holistic alignment": Decimal("10"),
 }
 
-_MAJOR_CIP: dict[str, tuple[str, ...]] = {
-    "biology": ("26",),
-    "biochemistry": ("26", "40"),
-    "chemistry": ("40",),
-    "molecular biology": ("26",),
-    "neuroscience": ("26",),
-    "physiology": ("26",),
-    "genetics": ("26",),
-    "microbiology": ("26",),
-    "biomedical engineering": ("14",),
-    "human physiology": ("26",),
-    "computer science": ("11",),
-    "mathematics": ("27",),
-    "engineering": ("14",),
-    "psychology": ("42",),
-    "business": ("52",),
-    "history": ("54",),
-    "english": ("23",),
+
+@dataclass(frozen=True)
+class _MajorMapping:
+    cip6: tuple[str, ...]
+    cip4: tuple[str, ...]
+    cip2: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _MajorEvidence:
+    component: FitComponent
+    offered: bool | None
+    match_granularity: int | None
+    availability_cip_code: str | None
+    ranking_cip_code: str | None
+
+
+_MAJOR_CIP: dict[str, _MajorMapping] = {
+    "biology": _MajorMapping(("260101",), ("2601",), ("26",)),
+    "biochemistry": _MajorMapping(("260202",), ("2602",), ("26",)),
+    "chemistry": _MajorMapping(("400501",), ("4005",), ("40",)),
+    "molecular biology": _MajorMapping(("260204",), ("2602",), ("26",)),
+    "neuroscience": _MajorMapping(("261501",), ("2615",), ("26",)),
+    "physiology": _MajorMapping(("260901",), ("2609",), ("26",)),
+    "genetics": _MajorMapping(("260801", "260806"), ("2608",), ("26",)),
+    "microbiology": _MajorMapping(("260502",), ("2605",), ("26",)),
+    "biomedical engineering": _MajorMapping(("140501",), ("1405",), ("14",)),
+    "human physiology": _MajorMapping(("260901",), ("2609",), ("26",)),
+    "pre medicine pre medical studies": _MajorMapping(("511102",), ("5111",), ("51",)),
+    "computer science": _MajorMapping(("110701",), ("1107",), ("11",)),
+    "mathematics": _MajorMapping(("270101",), ("2701",), ("27",)),
+    "engineering": _MajorMapping((), ("1401",), ("14",)),
+    "psychology": _MajorMapping(("420101",), ("4201",), ("42",)),
+    "business": _MajorMapping((), ("5201",), ("52",)),
+    "history": _MajorMapping(("540101",), ("5401",), ("54",)),
+    "english": _MajorMapping(("230101",), ("2301",), ("23",)),
 }
 
 _CIP_THEMES: dict[str, set[str]] = {
@@ -104,12 +123,13 @@ def _score_fit(
     major: str,
     offerings: list[ProgramOffering] | None,
 ) -> MajorFitResult:
+    major_evidence = _major_component(major, offerings)
     components = [
         _academic_component(school),
-        _major_component(major, offerings),
+        major_evidence.component,
         _preference_component(student, school),
         _outcomes_component(school),
-        _holistic_component(student, major, offerings),
+        _holistic_component(student, major, major_evidence),
     ]
     available = [component for component in components if component.score is not None]
     available_weight = sum((component.weight for component in available), Decimal(0))
@@ -130,8 +150,13 @@ def _score_fit(
         if coverage >= Decimal("0.5")
         else FitConfidence.LOW
     )
+    if major_evidence.match_granularity in {None, 2}:
+        confidence = FitConfidence.LOW
+    elif (
+        major_evidence.match_granularity == 4 or major_evidence.ranking_cip_code is None
+    ) and confidence is FitConfidence.HIGH:
+        confidence = FitConfidence.MEDIUM
     missing = [value for component in components for value in component.missing_inputs]
-    major_component = components[1]
     top = max(available, key=lambda item: item.score or Decimal(0), default=None)
     explanation = (
         f"Fit score {score}/100 for {major}; strongest available component: "
@@ -148,9 +173,10 @@ def _score_fit(
         confidence=confidence,
         methodology_version=FIT_METHODOLOGY_VERSION,
         cip_codes=_cip_codes(major),
-        program_offered=(
-            None if major_component.score is None else major_component.score > Decimal(0)
-        ),
+        availability_cip_code=major_evidence.availability_cip_code,
+        ranking_cip_code=major_evidence.ranking_cip_code,
+        match_granularity=major_evidence.match_granularity,
+        program_offered=major_evidence.offered,
         components=components,
         missing_inputs=list(dict.fromkeys(missing)),
         explanation=explanation,
@@ -177,27 +203,91 @@ def _academic_component(school: SchoolReport) -> FitComponent:
     )
 
 
-def _major_component(major: str, offerings: list[ProgramOffering] | None) -> FitComponent:
-    codes = _cip_codes(major)
-    if not codes:
-        return _missing("Major fit", f"reviewed CIP mapping for {major}")
+def _major_component(major: str, offerings: list[ProgramOffering] | None) -> _MajorEvidence:
+    mapping = _cip_mapping(major)
+    if mapping is None:
+        return _MajorEvidence(
+            _missing("Major fit", f"reviewed CIP mapping for {major}"),
+            None,
+            None,
+            None,
+            None,
+        )
     if not offerings:
-        return _missing("Major fit", "institution program-family data")
-    matches = [offering for offering in offerings if offering.cip_code in codes]
-    if not matches:
-        return FitComponent(
+        return _MajorEvidence(
+            _missing("Major fit", "institution program data"),
+            None,
+            None,
+            None,
+            None,
+        )
+    six = [item for item in offerings if item.cip_level == 6 and item.cip_code in mapping.cip6]
+    four = [item for item in offerings if item.cip_level == 4 and item.cip_code in mapping.cip4]
+    two = [item for item in offerings if item.cip_level == 2 and item.cip_code in mapping.cip2]
+    if six:
+        completions = sum(item.completion_count or 0 for item in six)
+        four_outcome = max(four, key=_program_outcome_sort, default=None)
+        score = Decimal(70) + min(Decimal(15), Decimal(completions) / Decimal(5))
+        if four_outcome and four_outcome.median_earnings_1yr is not None:
+            score += _earnings_score(four_outcome.median_earnings_1yr, maximum=Decimal(15))
+        component = FitComponent(
             name="Major fit",
             weight=_WEIGHTS["Major fit"],
-            score=Decimal(0),
-            evidence=f"No reported awards in mapped CIP families {', '.join(codes)}",
+            score=_round(min(Decimal(100), score)),
+            evidence=(
+                "Exact six-digit IPEDS CIP availability with "
+                f"{completions} bachelor's completion(s); "
+                + (
+                    "four-digit Scorecard outcomes included"
+                    if four_outcome
+                    else "four-digit outcomes unavailable"
+                )
+            ),
+            missing_inputs=[] if four_outcome else ["four-digit Scorecard program outcomes"],
         )
-    share = sum((Decimal(str(item.share_of_awards)) for item in matches), Decimal(0))
-    score = min(Decimal(100), Decimal(70) + share * Decimal(300))
-    return FitComponent(
-        name="Major fit",
-        weight=_WEIGHTS["Major fit"],
-        score=_round(score),
-        evidence=f"Reported CIP family share {share:.1%} ({', '.join(codes)})",
+        return _MajorEvidence(
+            component,
+            True,
+            6,
+            six[0].cip_code,
+            four_outcome.cip_code if four_outcome else None,
+        )
+    if four:
+        best = max(four, key=_program_outcome_sort)
+        score = Decimal(55)
+        if best.median_earnings_1yr is not None:
+            score += _earnings_score(best.median_earnings_1yr, maximum=Decimal(25))
+        component = FitComponent(
+            name="Major fit",
+            weight=_WEIGHTS["Major fit"],
+            score=_round(min(Decimal(80), score)),
+            evidence="Four-digit Scorecard field match; exact six-digit availability unavailable",
+            missing_inputs=["exact six-digit IPEDS program availability"],
+        )
+        return _MajorEvidence(component, True, 4, None, best.cip_code)
+    if two:
+        share = sum((Decimal(str(item.share_of_awards or 0)) for item in two), Decimal(0))
+        component = FitComponent(
+            name="Major fit",
+            weight=_WEIGHTS["Major fit"],
+            score=_round(min(Decimal(55), Decimal(35) + share * Decimal(100))),
+            evidence="Broad two-digit CIP fallback; exact program availability is unconfirmed",
+            missing_inputs=["four- and six-digit program evidence"],
+        )
+        return _MajorEvidence(component, None, 2, None, None)
+    has_six_digit_data = any(item.cip_level == 6 for item in offerings)
+    return _MajorEvidence(
+        FitComponent(
+            name="Major fit",
+            weight=_WEIGHTS["Major fit"],
+            score=Decimal(0) if has_six_digit_data else None,
+            evidence="Mapped program was not found in available institutional program data",
+            missing_inputs=[] if has_six_digit_data else ["six-digit IPEDS program availability"],
+        ),
+        False if has_six_digit_data else None,
+        None,
+        None,
+        None,
     )
 
 
@@ -256,32 +346,24 @@ def _outcomes_component(school: SchoolReport) -> FitComponent:
 def _holistic_component(
     student: StudentProfile,
     major: str,
-    offerings: list[ProgramOffering] | None,
+    major_evidence: _MajorEvidence,
 ) -> FitComponent:
     themes = {theme.casefold() for theme in student.holistic.themes}
     for activity in student.holistic.activities:
         themes.update(theme.casefold() for theme in activity.themes)
     if not themes:
         return _missing("Holistic alignment", "confirmed résumé/activity themes")
-    codes = _cip_codes(major)
-    if not codes or not offerings:
+    mapping = _cip_mapping(major)
+    if mapping is None or major_evidence.component.score is None:
         return _missing("Holistic alignment", "school program evidence for résumé alignment")
-    aligned = set().union(*(_CIP_THEMES.get(code, set()) for code in codes))
+    aligned = set().union(*(_CIP_THEMES.get(code, set()) for code in mapping.cip2))
     matches = sorted(
         theme for theme in themes if any(token in theme or theme in token for token in aligned)
     )
-    program_share = sum(
-        (
-            Decimal(str(offering.share_of_awards))
-            for offering in offerings
-            if offering.cip_code in codes
-        ),
-        Decimal(0),
-    )
-    if program_share == 0:
+    if major_evidence.component.score == 0:
         score = Decimal(0)
     elif matches:
-        score = min(Decimal(100), Decimal(65) + program_share * Decimal(350))
+        score = min(Decimal(100), Decimal(20) + major_evidence.component.score * Decimal("0.8"))
     else:
         score = Decimal(35)
     return FitComponent(
@@ -289,7 +371,8 @@ def _holistic_component(
         weight=_WEIGHTS["Holistic alignment"],
         score=_round(score),
         evidence=(
-            f"Aligned themes: {', '.join(matches)}; mapped program share {program_share:.1%}"
+            f"Aligned themes: {', '.join(matches)}; supported by "
+            f"{major_evidence.match_granularity or 'unknown'}-digit program evidence"
             if matches
             else "No confirmed theme aligned with the mapped program family"
         ),
@@ -337,13 +420,33 @@ def _consolidate(
 
 
 def _cip_codes(major: str) -> list[str]:
+    mapping = _cip_mapping(major)
+    if mapping is None:
+        return []
+    return list(dict.fromkeys((*mapping.cip6, *mapping.cip4, *mapping.cip2)))
+
+
+def _cip_mapping(major: str) -> _MajorMapping | None:
     normalized = " ".join(major.casefold().replace("/", " ").replace("-", " ").split())
     if normalized in _MAJOR_CIP:
-        return list(_MAJOR_CIP[normalized])
+        return _MAJOR_CIP[normalized]
     matches = [
-        codes for name, codes in _MAJOR_CIP.items() if name in normalized or normalized in name
+        mapping for name, mapping in _MAJOR_CIP.items() if name in normalized or normalized in name
     ]
-    return list(dict.fromkeys(code for codes in matches for code in codes))
+    return matches[0] if len(matches) == 1 else None
+
+
+def _program_outcome_sort(offering: ProgramOffering) -> tuple[int, int, int]:
+    return (
+        offering.median_earnings_1yr or 0,
+        offering.median_earnings_5yr or 0,
+        offering.completion_count or 0,
+    )
+
+
+def _earnings_score(value: int, *, maximum: Decimal) -> Decimal:
+    normalized = max(Decimal(0), min(Decimal(1), (Decimal(value) - 20000) / 80000))
+    return normalized * maximum
 
 
 def _comparable_cost(student: StudentProfile, school: SchoolReport) -> int | None:

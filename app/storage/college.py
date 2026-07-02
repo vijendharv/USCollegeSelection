@@ -24,7 +24,7 @@ from app.models import (
 )
 from app.storage.contracts import StorageError
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _CIP_FAMILIES = {
     "01": "Agriculture, Agriculture Operations, and Related Sciences",
@@ -229,7 +229,7 @@ class DuckDBCollegeStore:
         return [self._institution_from_row(row) for row in rows]
 
     def get_program_offerings(self, unit_ids: list[int]) -> list[ProgramOffering]:
-        """Return broad CIP families for the requested institutions in one query."""
+        """Return sourced CIP program records for the requested institutions."""
         if not unit_ids:
             return []
         placeholders = ", ".join("?" for _ in unit_ids)
@@ -237,7 +237,9 @@ class DuckDBCollegeStore:
             self._connect()
             .execute(
                 f"""
-            SELECT unit_id, cip_code, cip_title, share_of_awards, dataset_version_id
+            SELECT unit_id, cip_code, cip_title, cip_level, credential_level,
+                   completion_count, share_of_awards, median_earnings_1yr,
+                   median_earnings_5yr, median_debt, source_name, dataset_version_id
             FROM program_offerings
             WHERE unit_id IN ({placeholders})
             ORDER BY unit_id, cip_code
@@ -250,7 +252,14 @@ class DuckDBCollegeStore:
             "unit_id",
             "cip_code",
             "cip_title",
+            "cip_level",
+            "credential_level",
+            "completion_count",
             "share_of_awards",
+            "median_earnings_1yr",
+            "median_earnings_5yr",
+            "median_debt",
+            "source_name",
             "dataset_version_id",
         )
         return [ProgramOffering.model_validate(dict(zip(fields, row, strict=True))) for row in rows]
@@ -299,6 +308,8 @@ class DuckDBCollegeStore:
         source_url: str,
         retrieved_at: datetime,
         release_date: date | None,
+        field_archive_path: Path | None = None,
+        ipeds_archive_path: Path | None = None,
         minimum_eligible_institutions: int = 1_000,
     ) -> RefreshReport:
         """Build a validated temporary database and atomically replace the current one."""
@@ -306,6 +317,12 @@ class DuckDBCollegeStore:
             raise StorageError("Cannot refresh a read-only college store")
         if not archive_path.is_file():
             raise StorageError(f"College Scorecard archive not found: {archive_path}")
+        for label, path in (
+            ("College Scorecard field-of-study", field_archive_path),
+            ("IPEDS completions", ipeds_archive_path),
+        ):
+            if path is not None and not path.is_file():
+                raise StorageError(f"{label} archive not found: {path}")
 
         self.close()
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
@@ -317,13 +334,32 @@ class DuckDBCollegeStore:
             with tempfile.TemporaryDirectory(
                 prefix="scorecard-", dir=self.database_path.parent
             ) as temporary_directory:
+                destination = Path(temporary_directory)
                 csv_path, archive_member = self._extract_csv(
-                    archive_path, Path(temporary_directory)
+                    archive_path, destination, "institutions.csv"
                 )
-                checksum = self._sha256(archive_path)
+                field_csv_path = (
+                    self._extract_csv(field_archive_path, destination, "fields.csv")[0]
+                    if field_archive_path
+                    else None
+                )
+                ipeds_csv_path = (
+                    self._extract_csv(ipeds_archive_path, destination, "ipeds.csv")[0]
+                    if ipeds_archive_path
+                    else None
+                )
+                checksums = [self._sha256(archive_path)]
+                checksums.extend(
+                    self._sha256(path)
+                    for path in (field_archive_path, ipeds_archive_path)
+                    if path is not None
+                )
+                checksum = hashlib.sha256("".join(checksums).encode()).hexdigest()
                 dataset = self._build_database(
                     temporary_database,
                     csv_path=csv_path,
+                    field_csv_path=field_csv_path,
+                    ipeds_csv_path=ipeds_csv_path,
                     archive_member=archive_member,
                     source_url=source_url,
                     retrieved_at=retrieved_at,
@@ -348,7 +384,7 @@ class DuckDBCollegeStore:
         return self._connection
 
     @staticmethod
-    def _extract_csv(archive_path: Path, destination: Path) -> tuple[Path, str]:
+    def _extract_csv(archive_path: Path, destination: Path, output_name: str) -> tuple[Path, str]:
         with zipfile.ZipFile(archive_path) as archive:
             members = [
                 name
@@ -356,9 +392,9 @@ class DuckDBCollegeStore:
                 if name.lower().endswith(".csv") and not name.startswith("__MACOSX/")
             ]
             if len(members) != 1:
-                raise StorageError("Expected exactly one institution CSV in Scorecard archive")
+                raise StorageError("Expected exactly one CSV in source archive")
             member = members[0]
-            csv_path = destination / "scorecard.csv"
+            csv_path = destination / output_name
             with archive.open(member) as source, csv_path.open("wb") as output:
                 shutil.copyfileobj(source, output)
             return csv_path, member
@@ -376,6 +412,8 @@ class DuckDBCollegeStore:
         database_path: Path,
         *,
         csv_path: Path,
+        field_csv_path: Path | None,
+        ipeds_csv_path: Path | None,
         archive_member: str,
         source_url: str,
         retrieved_at: datetime,
@@ -485,9 +523,16 @@ class DuckDBCollegeStore:
                     unit_id BIGINT NOT NULL,
                     cip_code VARCHAR NOT NULL,
                     cip_title VARCHAR NOT NULL,
-                    share_of_awards DOUBLE NOT NULL,
+                    cip_level INTEGER NOT NULL,
+                    credential_level INTEGER,
+                    completion_count INTEGER,
+                    share_of_awards DOUBLE,
+                    median_earnings_1yr INTEGER,
+                    median_earnings_5yr INTEGER,
+                    median_debt INTEGER,
+                    source_name VARCHAR NOT NULL,
                     dataset_version_id VARCHAR NOT NULL,
-                    PRIMARY KEY (unit_id, cip_code)
+                    PRIMARY KEY (unit_id, cip_level, cip_code)
                 )
                 """
             )
@@ -498,13 +543,19 @@ class DuckDBCollegeStore:
                 connection.execute(
                     f"""
                     INSERT INTO program_offerings
-                    SELECT i.unit_id, ?, ?, TRY_CAST(r.{column} AS DOUBLE), ?
+                    SELECT i.unit_id, ?, ?, 2, NULL, NULL,
+                           TRY_CAST(r.{column} AS DOUBLE), NULL, NULL, NULL,
+                           'College Scorecard institution PCIP', ?
                     FROM scorecard_raw r
                     JOIN institutions i ON i.unit_id = TRY_CAST(r.UNITID AS BIGINT)
                     WHERE TRY_CAST(r.{column} AS DOUBLE) > 0
                     """,
                     [cip_code, cip_title, version_id],
                 )
+            if field_csv_path is not None:
+                self._load_scorecard_fields(connection, field_csv_path, version_id)
+            if ipeds_csv_path is not None:
+                self._load_ipeds_programs(connection, ipeds_csv_path, version_id)
             connection.execute(
                 "CREATE INDEX program_offerings_unit_idx ON program_offerings(unit_id)"
             )
@@ -557,6 +608,112 @@ class DuckDBCollegeStore:
             )
         finally:
             connection.close()
+
+    @staticmethod
+    def _load_scorecard_fields(
+        connection: duckdb.DuckDBPyConnection,
+        csv_path: Path,
+        version_id: str,
+    ) -> None:
+        connection.execute(
+            """
+            CREATE TABLE scorecard_field_raw AS
+            SELECT * FROM read_csv(?, header = true, all_varchar = true, null_padding = true)
+            """,
+            [str(csv_path)],
+        )
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info('scorecard_field_raw')").fetchall()
+        }
+        required = {"UNITID", "CIPCODE", "CIPDESC", "CREDLEV"}
+        missing = sorted(required - columns)
+        if missing:
+            raise StorageError(f"Scorecard field data is missing required columns: {missing}")
+        connection.execute(
+            """
+            INSERT INTO program_offerings
+            SELECT
+                i.unit_id,
+                LPAD(REGEXP_REPLACE(TRIM(f.CIPCODE), '[^0-9]', '', 'g'), 4, '0'),
+                TRIM(TRAILING '.' FROM TRIM(f.CIPDESC)),
+                4,
+                3,
+                GREATEST(
+                    COALESCE(TRY_CAST(f.IPEDSCOUNT1 AS INTEGER), 0),
+                    COALESCE(TRY_CAST(f.IPEDSCOUNT2 AS INTEGER), 0)
+                ),
+                NULL,
+                COALESCE(
+                    TRY_CAST(f.EARN_MDN_HI_1YR AS INTEGER),
+                    TRY_CAST(f.EARN_MDN_1YR AS INTEGER)
+                ),
+                TRY_CAST(f.EARN_MDN_5YR AS INTEGER),
+                TRY_CAST(f.DEBT_ALL_STGP_ANY_MDN AS INTEGER),
+                'College Scorecard field of study',
+                ?
+            FROM scorecard_field_raw f
+            JOIN institutions i ON i.unit_id = TRY_CAST(f.UNITID AS BIGINT)
+            WHERE TRY_CAST(f.CREDLEV AS INTEGER) = 3
+              AND LENGTH(REGEXP_REPLACE(TRIM(f.CIPCODE), '[^0-9]', '', 'g')) <= 4
+            QUALIFY ROW_NUMBER() OVER (
+                PARTITION BY i.unit_id,
+                    LPAD(REGEXP_REPLACE(TRIM(f.CIPCODE), '[^0-9]', '', 'g'), 4, '0')
+                ORDER BY COALESCE(TRY_CAST(f.IPEDSCOUNT2 AS INTEGER), 0) DESC
+            ) = 1
+            """,
+            [version_id],
+        )
+        connection.execute("DROP TABLE scorecard_field_raw")
+
+    @staticmethod
+    def _load_ipeds_programs(
+        connection: duckdb.DuckDBPyConnection,
+        csv_path: Path,
+        version_id: str,
+    ) -> None:
+        connection.execute(
+            """
+            CREATE TABLE ipeds_program_raw AS
+            SELECT * FROM read_csv(?, header = true, all_varchar = true, null_padding = true)
+            """,
+            [str(csv_path)],
+        )
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info('ipeds_program_raw')").fetchall()
+        }
+        required = {"UNITID", "CIPCODE", "MAJORNUM", "AWLEVEL", "CTOTALT"}
+        missing = sorted(required - columns)
+        if missing:
+            raise StorageError(f"IPEDS completions data is missing required columns: {missing}")
+        connection.execute(
+            """
+            INSERT INTO program_offerings
+            SELECT
+                i.unit_id,
+                REGEXP_REPLACE(TRIM(p.CIPCODE), '[^0-9]', '', 'g'),
+                'CIP ' || TRIM(p.CIPCODE),
+                6,
+                3,
+                SUM(COALESCE(TRY_CAST(p.CTOTALT AS INTEGER), 0)),
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                'IPEDS Completions',
+                ?
+            FROM ipeds_program_raw p
+            JOIN institutions i ON i.unit_id = TRY_CAST(p.UNITID AS BIGINT)
+            WHERE TRY_CAST(p.AWLEVEL AS INTEGER) = 5
+              AND TRY_CAST(p.MAJORNUM AS INTEGER) = 1
+              AND LENGTH(REGEXP_REPLACE(TRIM(p.CIPCODE), '[^0-9]', '', 'g')) = 6
+            GROUP BY i.unit_id, p.CIPCODE
+            HAVING SUM(COALESCE(TRY_CAST(p.CTOTALT AS INTEGER), 0)) > 0
+            """,
+            [version_id],
+        )
+        connection.execute("DROP TABLE ipeds_program_raw")
 
     @staticmethod
     def _validate_database(

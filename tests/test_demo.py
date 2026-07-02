@@ -41,7 +41,7 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
     assert "Harvard University" in pdf_text
     assert workbook.sheetnames[0] == "College List"
     assert len(report["schools"]) == 5
-    assert report["fit_methodology_version"] == "1.0"
+    assert report["fit_methodology_version"] == "1.1"
     assert report["major_rankings"]
     assert (
         report["major_rankings"][0]["institution_name"]

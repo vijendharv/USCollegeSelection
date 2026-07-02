@@ -434,6 +434,7 @@ flowchart LR
     M5 --> M6["1.6 PDF and Excel"]
     M6 --> M7["1.7 Offline demo"]
     M7 --> M8["1.8 Fit-ranked shortlist"]
+    M8 --> M9["1.9 Granular CIP data"]
 ```
 
 #### Milestone 1.1 — Project foundation
@@ -546,6 +547,19 @@ Deliverables:
 The initial fit rank uses only transparent signals supported by free data: academic position within published ranges, intended-major availability, program and institution outcomes, stated cost and geography preferences, data completeness, and alignment between confirmed student themes and offered fields of study. The same institution may therefore rank differently for different majors. Admissions categories remain institution-level unless reliable major-specific selectivity is sourced; the fit rank must not imply that a university-wide acceptance rate is a program-specific admission rate. It does not claim to reproduce a proprietary national ranking or compare extracurricular strength against an unpublished admitted-student benchmark.
 
 Complete when input order cannot affect shortlist order, the highest fit-ranked schools are selected within each category, every score is reproducible and explainable, résumé context cannot change a category, and missing data remains visible rather than being silently treated as zero.
+
+#### Milestone 1.9 — Granular CIP program data
+
+Deliverables:
+
+- Ingest College Scorecard's four-digit bachelor field-of-study records for completion, earnings, and debt evidence.
+- Ingest IPEDS Completions six-digit CIP records for exact bachelor-program availability.
+- Match each intended major to reviewed six-, four-, and two-digit CIP codes.
+- Use six-digit data to confirm availability, four-digit data for ranking outcomes, and two-digit institution shares only as a lower-confidence fallback.
+- Show the availability CIP6, ranking CIP4, match granularity, source, and missing evidence in canonical JSON, PDF, and Excel outputs.
+- Keep all downloads inside the explicit refresh workflow and all recommendation runs offline.
+
+Complete when a real schema-version-3 refresh joins all three free federal sources by UNITID, exact programs can rank differently within their four-digit field, fallback confidence is explicit, and automated plus real-data smoke tests pass.
 
 ### Stage 2 — Documents
 

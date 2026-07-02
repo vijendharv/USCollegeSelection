@@ -52,12 +52,19 @@ class Institution(DomainModel):
 
 
 class ProgramOffering(DomainModel):
-    """A broad two-digit CIP program family reported by College Scorecard."""
+    """A sourced CIP program record at two-, four-, or six-digit granularity."""
 
     unit_id: int
     cip_code: str
     cip_title: str
-    share_of_awards: float = Field(ge=0, le=1)
+    cip_level: int = Field(ge=2, le=6)
+    credential_level: int | None = None
+    completion_count: int | None = Field(default=None, ge=0)
+    share_of_awards: float | None = Field(default=None, ge=0, le=1)
+    median_earnings_1yr: int | None = Field(default=None, ge=0)
+    median_earnings_5yr: int | None = Field(default=None, ge=0)
+    median_debt: int | None = Field(default=None, ge=0)
+    source_name: str
     dataset_version_id: str
 
 

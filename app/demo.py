@@ -28,6 +28,8 @@ from app.storage import DuckDBCollegeStore, LocalSessionFileStore, StorageError
 _FIXTURE_SOURCE_URL = "https://collegescorecard.ed.gov/data/"
 _FIXTURE_RELEASE_DATE = date(2026, 6, 10)
 _ARCHIVE_MEMBER = "Most-Recent-Cohorts-Institution.csv"
+_FIELD_ARCHIVE_MEMBER = "Most-Recent-Cohorts-Field-of-Study.csv"
+_IPEDS_ARCHIVE_MEMBER = "C2024_a.csv"
 
 
 class DemoError(RuntimeError):
@@ -64,13 +66,23 @@ def run_offline_demo(
             raise DemoError(f"College fixture not found: {fixture_csv_path}")
         database_path.parent.mkdir(parents=True, exist_ok=True)
         archive_path = database_path.parent / "demo-scorecard.zip"
-        _build_fixture_archive(fixture_csv_path, archive_path)
+        _build_fixture_archive(fixture_csv_path, archive_path, _ARCHIVE_MEMBER)
+        field_fixture = fixture_csv_path.parent / "fields.csv"
+        ipeds_fixture = fixture_csv_path.parent / "ipeds-completions.csv"
+        field_archive = database_path.parent / "demo-scorecard-fields.zip"
+        ipeds_archive = database_path.parent / "demo-ipeds-completions.zip"
+        if field_fixture.is_file():
+            _build_fixture_archive(field_fixture, field_archive, _FIELD_ARCHIVE_MEMBER)
+        if ipeds_fixture.is_file():
+            _build_fixture_archive(ipeds_fixture, ipeds_archive, _IPEDS_ARCHIVE_MEMBER)
         with DuckDBCollegeStore(database_path, read_only=False) as store:
             store.refresh_from_scorecard_zip(
                 archive_path,
                 source_url=_FIXTURE_SOURCE_URL,
                 retrieved_at=generated_at or datetime.now(UTC),
                 release_date=_FIXTURE_RELEASE_DATE,
+                field_archive_path=field_archive if field_fixture.is_file() else None,
+                ipeds_archive_path=ipeds_archive if ipeds_fixture.is_file() else None,
                 minimum_eligible_institutions=1,
             )
 
@@ -213,11 +225,11 @@ def _selected_major_rankings(
     return selected
 
 
-def _build_fixture_archive(csv_path: Path, archive_path: Path) -> None:
+def _build_fixture_archive(csv_path: Path, archive_path: Path, member: str) -> None:
     temporary = archive_path.with_suffix(".tmp")
     try:
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            archive.write(csv_path, arcname=_ARCHIVE_MEMBER)
+            archive.write(csv_path, arcname=member)
         temporary.replace(archive_path)
     except (OSError, zipfile.BadZipFile) as exc:
         temporary.unlink(missing_ok=True)
