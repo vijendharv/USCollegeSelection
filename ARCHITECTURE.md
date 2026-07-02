@@ -534,14 +534,15 @@ The demo scans the local institution database, applies confirmed geographic pref
 Deliverables:
 
 - Replace first-in-database category truncation with a deterministic, versioned fit rank.
-- Rank schools independently within Safety / Likely, Target, Reach, and Insufficient Data without changing their admissions classifications.
+- Rank each `student × institution × intended major` combination independently within Safety / Likely, Target, Reach, and Insufficient Data without changing the institution-level admissions classification.
 - Add free federal program-of-study data using CIP codes so intended-major availability is a real school-specific signal.
 - Represent confirmed résumé themes as structured holistic context rather than unscored prose.
 - Use résumé themes only for program and opportunity alignment; never convert them into an invented admissions boost.
-- Include component scores, missing inputs, score version, and a plain-language ranking explanation in JSON, PDF, and Excel.
+- Produce separate categorized lists for every intended major plus a consolidated multi-major view.
+- Include major, component scores, missing inputs, score version, and a plain-language ranking explanation in JSON, PDF, and Excel.
 - Preserve user-entered schools even when they fall outside the category cap or matching preferences.
 
-The initial fit rank uses only transparent signals supported by free data: academic position within published ranges, intended-major availability, graduation and retention outcomes, earnings context, stated cost and geography preferences, data completeness, and alignment between confirmed student themes and offered fields of study. It does not claim to reproduce a proprietary national ranking or compare extracurricular strength against an unpublished admitted-student benchmark.
+The initial fit rank uses only transparent signals supported by free data: academic position within published ranges, intended-major availability, program and institution outcomes, stated cost and geography preferences, data completeness, and alignment between confirmed student themes and offered fields of study. The same institution may therefore rank differently for different majors. Admissions categories remain institution-level unless reliable major-specific selectivity is sourced; the fit rank must not imply that a university-wide acceptance rate is a program-specific admission rate. It does not claim to reproduce a proprietary national ranking or compare extracurricular strength against an unpublished admitted-student benchmark.
 
 Complete when input order cannot affect shortlist order, the highest fit-ranked schools are selected within each category, every score is reproducible and explainable, résumé context cannot change a category, and missing data remains visible rather than being silently treated as zero.
 
