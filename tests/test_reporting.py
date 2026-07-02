@@ -11,6 +11,7 @@ from app.models import (
     AdmissionCategory,
     AdmissionsBenchmark,
     BudgetType,
+    CollegeReport,
     Course,
     CourseLevel,
     DatasetVersion,
@@ -127,7 +128,7 @@ def benchmark() -> AdmissionsBenchmark:
     )
 
 
-def test_report_contains_all_categories_and_reproducible_metadata() -> None:
+def sample_report() -> CollegeReport:
     candidates = [
         ReportCandidate(
             institution=school(1, "Likely University", sat_low=1100, sat_high=1300),
@@ -144,8 +145,11 @@ def test_report_contains_all_categories_and_reproducible_metadata() -> None:
             institution=school(4, "Unknown University", rate=0.70, sat_low=None, sat_high=None)
         ),
     ]
+    return build_college_report(student(), candidates, dataset(), generated_at=GENERATED_AT)
 
-    report = build_college_report(student(), candidates, dataset(), generated_at=GENERATED_AT)
+
+def test_report_contains_all_categories_and_reproducible_metadata() -> None:
+    report = sample_report()
 
     assert {item.classification.category for item in report.schools} == set(AdmissionCategory)
     assert report.generated_at == GENERATED_AT
