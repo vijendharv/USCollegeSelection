@@ -1,6 +1,6 @@
 # US College Selection — Product Specification
 
-**Version:** 0.6.0
+**Version:** 0.7.0
 **Status:** Initial draft  
 **Last updated:** 2026-06-30
 
@@ -291,6 +291,8 @@ Classification must be produced by deterministic, versioned, testable applicatio
 
 Race, ethnicity, gender, disability, religion, and other protected traits must not be used to estimate admission likelihood.
 
+SAT and ACT are optional. Either test may support a classification when the student plans to submit it and a compatible institution range exists. If both are provided, use the stronger comparison and disclose that the weaker test was excluded; never require both tests.
+
 ### 11.2 Category definitions
 
 - **Safety / Likely:** The student is at or above the institution's typical academic profile, the overall admit rate is reasonably high, no known major restriction materially increases risk, and the supporting data are sufficiently complete.
@@ -310,6 +312,8 @@ Every classification must expose:
 - unavailable or excluded factors;
 - source year and URL; and
 - a plain-language explanation and confidence level.
+
+The end-user result must include a visible **Missing data** section. It lists unavailable student inputs and school benchmarks that reduced confidence or prevented classification. Incompatible or intentionally excluded evidence, such as a weighted GPA against an unweighted benchmark or scores the student will not submit, must appear separately and must not be described as missing.
 
 ## 12. Gap analysis
 

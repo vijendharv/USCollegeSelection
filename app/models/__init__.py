@@ -21,6 +21,15 @@ from app.models.assessment import (
     WarningSeverity,
     assess_profile,
 )
+from app.models.classification import (
+    AcademicStanding,
+    AdmissionCategory,
+    AdmissionsBenchmark,
+    ClassificationConfidence,
+    ClassificationResult,
+    ClassificationRule,
+    GPABenchmark,
+)
 from app.models.college import (
     DatasetVersion,
     Institution,
@@ -38,13 +47,20 @@ from app.models.student import StudentProfile
 
 __all__ = [
     "AcademicRecord",
+    "AcademicStanding",
+    "AdmissionCategory",
+    "AdmissionsBenchmark",
     "ApplicantStage",
     "BudgetType",
+    "ClassificationConfidence",
+    "ClassificationResult",
+    "ClassificationRule",
     "Course",
     "CourseLevel",
     "CourseStatus",
     "DatasetVersion",
     "EntryTerm",
+    "GPABenchmark",
     "GPARecord",
     "GPAScope",
     "GPAType",
