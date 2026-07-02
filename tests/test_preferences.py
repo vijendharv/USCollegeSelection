@@ -32,3 +32,8 @@ def test_budget_with_type_is_valid() -> None:
 def test_state_cannot_be_preferred_and_excluded() -> None:
     with pytest.raises(ValidationError, match="both preferred and excluded"):
         StudentPreferences(preferred_states=["CA"], excluded_states=["ca"])
+
+
+def test_no_more_than_three_intended_majors_are_accepted() -> None:
+    with pytest.raises(ValueError, match="at most 3 items"):
+        StudentPreferences(intended_majors=["Biology", "Chemistry", "Physics", "Mathematics"])

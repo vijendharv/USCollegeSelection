@@ -153,7 +153,7 @@ def test_report_contains_all_categories_and_reproducible_metadata() -> None:
 
     assert {item.classification.category for item in report.schools} == set(AdmissionCategory)
     assert report.generated_at == GENERATED_AT
-    assert report.report_version == "1.0"
+    assert report.report_version == "1.1"
     assert report.methodology_version == "1.0"
     assert report.disclaimer == DISCLAIMER
     snapshot = {

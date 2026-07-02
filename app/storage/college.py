@@ -19,11 +19,53 @@ from app.models import (
     DatasetVersion,
     Institution,
     InstitutionFilters,
+    ProgramOffering,
     RefreshReport,
 )
 from app.storage.contracts import StorageError
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+
+_CIP_FAMILIES = {
+    "01": "Agriculture, Agriculture Operations, and Related Sciences",
+    "03": "Natural Resources and Conservation",
+    "04": "Architecture and Related Services",
+    "05": "Area, Ethnic, Cultural, Gender, and Group Studies",
+    "09": "Communication, Journalism, and Related Programs",
+    "10": "Communications Technologies",
+    "11": "Computer and Information Sciences",
+    "12": "Personal and Culinary Services",
+    "13": "Education",
+    "14": "Engineering",
+    "15": "Engineering Technologies",
+    "16": "Foreign Languages, Literatures, and Linguistics",
+    "19": "Family and Consumer Sciences",
+    "22": "Legal Professions and Studies",
+    "23": "English Language and Literature",
+    "24": "Liberal Arts and Sciences",
+    "25": "Library Science",
+    "26": "Biological and Biomedical Sciences",
+    "27": "Mathematics and Statistics",
+    "29": "Military Technologies",
+    "30": "Multi/Interdisciplinary Studies",
+    "31": "Parks, Recreation, Leisure, and Fitness Studies",
+    "38": "Philosophy and Religious Studies",
+    "39": "Theology and Religious Vocations",
+    "40": "Physical Sciences",
+    "41": "Science Technologies",
+    "42": "Psychology",
+    "43": "Homeland Security and Protective Services",
+    "44": "Public Administration and Social Service Professions",
+    "45": "Social Sciences",
+    "46": "Construction Trades",
+    "47": "Mechanic and Repair Technologies",
+    "48": "Precision Production",
+    "49": "Transportation and Materials Moving",
+    "50": "Visual and Performing Arts",
+    "51": "Health Professions and Related Programs",
+    "52": "Business, Management, Marketing, and Related Support Services",
+    "54": "History",
+}
 
 _REQUIRED_COLUMNS = {
     "UNITID",
@@ -126,7 +168,12 @@ class DuckDBCollegeStore:
                     "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
                 ).fetchall()
             }
-            return {"institutions", "dataset_versions"}.issubset(tables)
+            if not {"institutions", "program_offerings", "dataset_versions"}.issubset(tables):
+                return False
+            row = connection.execute(
+                "SELECT schema_version FROM dataset_versions ORDER BY retrieved_at DESC LIMIT 1"
+            ).fetchone()
+            return bool(row and row[0] == SCHEMA_VERSION)
         except duckdb.Error:
             return False
 
@@ -180,6 +227,33 @@ class DuckDBCollegeStore:
             .fetchall()
         )
         return [self._institution_from_row(row) for row in rows]
+
+    def get_program_offerings(self, unit_ids: list[int]) -> list[ProgramOffering]:
+        """Return broad CIP families for the requested institutions in one query."""
+        if not unit_ids:
+            return []
+        placeholders = ", ".join("?" for _ in unit_ids)
+        rows = (
+            self._connect()
+            .execute(
+                f"""
+            SELECT unit_id, cip_code, cip_title, share_of_awards, dataset_version_id
+            FROM program_offerings
+            WHERE unit_id IN ({placeholders})
+            ORDER BY unit_id, cip_code
+            """,
+                unit_ids,
+            )
+            .fetchall()
+        )
+        fields = (
+            "unit_id",
+            "cip_code",
+            "cip_title",
+            "share_of_awards",
+            "dataset_version_id",
+        )
+        return [ProgramOffering.model_validate(dict(zip(fields, row, strict=True))) for row in rows]
 
     def current_dataset_version(self) -> DatasetVersion | None:
         row = (
@@ -405,6 +479,35 @@ class DuckDBCollegeStore:
             connection.execute("ALTER TABLE institutions ADD PRIMARY KEY (unit_id)")
             connection.execute("CREATE INDEX institutions_name_idx ON institutions(name)")
             connection.execute("CREATE INDEX institutions_state_idx ON institutions(state)")
+            connection.execute(
+                """
+                CREATE TABLE program_offerings (
+                    unit_id BIGINT NOT NULL,
+                    cip_code VARCHAR NOT NULL,
+                    cip_title VARCHAR NOT NULL,
+                    share_of_awards DOUBLE NOT NULL,
+                    dataset_version_id VARCHAR NOT NULL,
+                    PRIMARY KEY (unit_id, cip_code)
+                )
+                """
+            )
+            for cip_code, cip_title in _CIP_FAMILIES.items():
+                column = f"PCIP{cip_code}"
+                if column not in columns:
+                    continue
+                connection.execute(
+                    f"""
+                    INSERT INTO program_offerings
+                    SELECT i.unit_id, ?, ?, TRY_CAST(r.{column} AS DOUBLE), ?
+                    FROM scorecard_raw r
+                    JOIN institutions i ON i.unit_id = TRY_CAST(r.UNITID AS BIGINT)
+                    WHERE TRY_CAST(r.{column} AS DOUBLE) > 0
+                    """,
+                    [cip_code, cip_title, version_id],
+                )
+            connection.execute(
+                "CREATE INDEX program_offerings_unit_idx ON program_offerings(unit_id)"
+            )
             connection.execute(
                 """
                 CREATE TABLE dataset_versions (

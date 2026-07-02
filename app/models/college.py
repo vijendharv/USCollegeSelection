@@ -51,6 +51,16 @@ class Institution(DomainModel):
     dataset_version_id: str
 
 
+class ProgramOffering(DomainModel):
+    """A broad two-digit CIP program family reported by College Scorecard."""
+
+    unit_id: int
+    cip_code: str
+    cip_title: str
+    share_of_awards: float = Field(ge=0, le=1)
+    dataset_version_id: str
+
+
 class InstitutionFilters(DomainModel):
     name_contains: str | None = None
     states: list[str] = Field(default_factory=list)

@@ -99,7 +99,21 @@ def test_dataset_version_is_queryable(tmp_path: Path) -> None:
     assert version is not None
     assert version.source_url == SOURCE_URL
     assert version.sha256
-    assert version.schema_version == 1
+    assert version.schema_version == 2
+
+
+def test_program_offerings_are_loaded_from_scorecard_cip_families(tmp_path: Path) -> None:
+    database = tmp_path / "college.duckdb"
+    archive = make_archive(tmp_path)
+    with DuckDBCollegeStore(database, read_only=False) as writer:
+        refresh_fixture(writer, archive)
+
+    with DuckDBCollegeStore(database) as store:
+        offerings = store.get_program_offerings([139755])
+
+    assert {item.cip_code for item in offerings} == {"11", "14", "26", "40"}
+    engineering = next(item for item in offerings if item.cip_code == "14")
+    assert engineering.share_of_awards == pytest.approx(0.55)
 
 
 def test_failed_refresh_preserves_existing_database(tmp_path: Path) -> None:

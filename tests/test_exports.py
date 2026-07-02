@@ -17,6 +17,7 @@ def test_excel_has_required_sheets_tables_and_frozen_headers() -> None:
 
     assert workbook.sheetnames == [
         "College List",
+        "Major Rankings",
         "Gap Analysis",
         "Student Profile",
         "Application Tracker",

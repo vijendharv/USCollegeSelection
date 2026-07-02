@@ -57,7 +57,7 @@ The command discovers the current official institution archive from the College 
 
 ## Run the complete demo locally
 
-The demo runs on your computer and uses the full real College Scorecard database. No cloud deployment or paid service is involved.
+The demo runs on your computer and uses the full real College Scorecard database. No cloud deployment or paid service is involved. Results are fit-ranked separately for each intended major rather than selected alphabetically.
 
 First install dependencies and download the real public data once:
 
@@ -65,6 +65,8 @@ First install dependencies and download the real public data once:
 uv sync --all-groups
 uv run python -m app refresh-data
 ```
+
+Run `refresh-data` again after upgrading from Milestone 1.7. Database schema version 2 adds broad CIP program-family offerings used by major fit ranking.
 
 Then run the demo using the included synthetic student profile:
 
@@ -80,7 +82,7 @@ college-report.pdf
 college-report.xlsx
 ```
 
-The JSON, PDF, and Excel workbook are generated from the same canonical report. By default, the demo returns up to ten schools per Safety / Likely, Target, Reach, and Insufficient Data category when enough defensible results exist.
+The JSON, PDF, and Excel workbook are generated from the same canonical report. Profiles must contain one to three intended majors in priority order. By default, the demo returns up to ten ranked college-major combinations per Safety / Likely, Target, Reach, and Insufficient Data category when enough defensible results exist. Admissions categories remain institution-level; the fit rank is major-specific.
 
 To test another student, copy the example, edit it, and supply its path:
 
@@ -111,6 +113,7 @@ uv run python -m app demo \
 - College Scorecard is the latest available annual federal data, not live admissions data.
 - Many institutions do not report compatible GPA or test-score ranges, so they may be labeled Insufficient Data.
 - Major-specific admissions selectivity, current deadlines, fees, and supplements are not yet populated.
+- Major availability uses broad two-digit federal CIP families; it does not prove direct admission, program capacity, or program-specific selectivity.
 - Transcript and résumé PDF parsing begins in Stage 2; Milestone 1.7 accepts confirmed profile JSON.
 
 ## Documentation
