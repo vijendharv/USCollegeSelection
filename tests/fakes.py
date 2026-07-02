@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from app.models import DatasetVersion, Institution, InstitutionFilters
 from app.networking import DownloadResult, ResponseMetadata
 
 
@@ -26,6 +27,7 @@ class FakeNetworkClient:
 
     def download_file(self, url: str, destination: Path) -> DownloadResult:
         text, metadata = self._response(url)
+        destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(text, encoding="utf-8")
         return DownloadResult(destination, len(text.encode()), metadata)
 
@@ -37,6 +39,17 @@ class FakeCollegeStore:
 
     def healthcheck(self) -> bool:
         return self.healthy
+
+    def get_institution(self, unit_id: int) -> Institution | None:
+        del unit_id
+        return None
+
+    def search_institutions(self, filters: InstitutionFilters) -> list[Institution]:
+        del filters
+        return []
+
+    def current_dataset_version(self) -> DatasetVersion | None:
+        return None
 
     def close(self) -> None:
         self.closed = True

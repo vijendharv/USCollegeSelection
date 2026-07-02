@@ -20,6 +20,13 @@ from app.models.assessment import (
     WarningSeverity,
     assess_profile,
 )
+from app.models.college import (
+    DatasetVersion,
+    Institution,
+    InstitutionFilters,
+    Ownership,
+    RefreshReport,
+)
 from app.models.preferences import (
     BudgetType,
     EntryTerm,
@@ -34,14 +41,19 @@ __all__ = [
     "Course",
     "CourseLevel",
     "CourseStatus",
+    "DatasetVersion",
     "EntryTerm",
     "GPARecord",
     "GPAScope",
     "GPAType",
     "Grade",
+    "Institution",
+    "InstitutionFilters",
+    "Ownership",
     "ProfileAssessment",
     "ProfileWarning",
     "RecordSource",
+    "RefreshReport",
     "StandardizedTest",
     "StudentPreferences",
     "StudentProfile",
