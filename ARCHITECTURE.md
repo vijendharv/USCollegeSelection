@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.7.0
+**Version:** 0.8.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -480,6 +480,10 @@ Deliverables:
 - Return confidence, triggered rules, missing inputs, methodology version, and source dates.
 
 Complete when a versioned test matrix covers category boundaries, highly selective schools, incompatible GPA data, and missing benchmarks.
+
+Version 1 uses an explicit conservative rule set: an overall acceptance rate of 20% or lower forces Reach; Safety / Likely requires an acceptance rate of at least 50% and every compatible academic comparison above the published upper bound; a value below a published lower bound produces Reach; otherwise supported comparisons produce Target. Without a compatible academic comparison, the result is Insufficient Data unless the highly selective override applies. These constants are methodology-versioned rather than hidden in prompts.
+
+Each result returns category, confidence, triggered rules, student values and school ranges used, missing inputs, excluded factors, source dates and URLs, methodology version, and a plain-language explanation. The UI and later reports render `missing_inputs` as a visible **Missing data** section and keep deliberately excluded evidence separate.
 
 #### Milestone 1.5 — Gap analysis and report model
 
