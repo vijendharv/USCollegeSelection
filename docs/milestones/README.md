@@ -16,7 +16,7 @@ Each completed milestone should document:
 | Milestone | Status | Implementation record |
 |---|---|---|
 | 1.1 Project foundation | Complete | [1.1 Project foundation](1.1-project-foundation.md) |
-| 1.2 Student profile and manual academics | Not started | — |
+| 1.2 Student profile and manual academics | Complete | [1.2 Student profile and manual academics](1.2-student-profile.md) |
 | 1.3 College data slice | Not started | — |
 | 1.4 Classification engine v1 | Not started | — |
 | 1.5 Gap analysis and report model | Not started | — |
