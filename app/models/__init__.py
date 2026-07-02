@@ -14,11 +14,19 @@ from app.models.academic import (
     Term,
     TestScore,
 )
+from app.models.applicant import ApplicantStage, HighSchoolContext
 from app.models.assessment import (
     ProfileAssessment,
     ProfileWarning,
     WarningSeverity,
     assess_profile,
+)
+from app.models.college import (
+    DatasetVersion,
+    Institution,
+    InstitutionFilters,
+    Ownership,
+    RefreshReport,
 )
 from app.models.preferences import (
     BudgetType,
@@ -30,18 +38,25 @@ from app.models.student import StudentProfile
 
 __all__ = [
     "AcademicRecord",
+    "ApplicantStage",
     "BudgetType",
     "Course",
     "CourseLevel",
     "CourseStatus",
+    "DatasetVersion",
     "EntryTerm",
     "GPARecord",
     "GPAScope",
     "GPAType",
     "Grade",
+    "HighSchoolContext",
+    "Institution",
+    "InstitutionFilters",
+    "Ownership",
     "ProfileAssessment",
     "ProfileWarning",
     "RecordSource",
+    "RefreshReport",
     "StandardizedTest",
     "StudentPreferences",
     "StudentProfile",

@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     max_download_bytes: int = Field(default=1_000_000_000, gt=0)
 
+    @property
+    def college_database_path(self) -> Path:
+        return self.data_dir / "college.duckdb"
+
+    @property
+    def raw_data_dir(self) -> Path:
+        return self.data_dir / "raw"
+
     def ensure_directories(self) -> None:
         """Create only the local directories the foundation currently owns."""
         self.data_dir.mkdir(parents=True, exist_ok=True)

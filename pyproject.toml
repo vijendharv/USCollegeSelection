@@ -9,6 +9,7 @@ description = "Explainable US college selection and gap analysis"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "duckdb>=1.4,<2",
   "httpx>=0.28,<1",
   "pydantic>=2.11,<3",
   "pydantic-settings>=2.9,<3",

@@ -67,8 +67,10 @@ class HttpClient:
                         self._check_size(bytes_written)
                         output.write(chunk)
                 metadata = self._metadata(response)
-        except (httpx.HTTPError, OSError) as exc:
+        except (httpx.HTTPError, NetworkError, OSError) as exc:
             destination.unlink(missing_ok=True)
+            if isinstance(exc, NetworkError):
+                raise
             raise NetworkError(f"Failed to download {url}") from exc
         return DownloadResult(destination, bytes_written, metadata)
 
@@ -89,8 +91,12 @@ class HttpClient:
 
     def _check_content_length(self, response: httpx.Response) -> None:
         content_length = response.headers.get("content-length")
-        if content_length and int(content_length) > self._max_response_bytes:
-            raise NetworkError("Response exceeds the configured size limit")
+        if content_length:
+            try:
+                size = int(content_length)
+            except ValueError as exc:
+                raise NetworkError("Response returned an invalid content-length") from exc
+            self._check_size(size)
 
     def _check_size(self, size: int) -> None:
         if size > self._max_response_bytes:

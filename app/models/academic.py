@@ -104,6 +104,7 @@ class Course(DomainModel):
     course_id: UUID = Field(default_factory=uuid4)
     subject: ShortText
     name: ShortText | None = None
+    grade_level: int | None = Field(default=None, ge=9, le=12)
     school_year: Annotated[str, StringConstraints(min_length=1, max_length=32)] | None = None
     term: Term = Term.UNKNOWN
     level: CourseLevel = CourseLevel.UNKNOWN

@@ -6,7 +6,8 @@ from enum import StrEnum
 
 from pydantic import Field
 
-from app.models.academic import CourseLevel, GPAType
+from app.models.academic import CourseLevel, CourseStatus, GPAType
+from app.models.applicant import ApplicantStage
 from app.models.base import DomainModel
 from app.models.student import StudentProfile
 
@@ -33,9 +34,14 @@ def assess_profile(profile: StudentProfile) -> ProfileAssessment:
     """Describe missing or ambiguous data while preserving the submitted profile."""
     warnings: list[ProfileWarning] = []
     academic = profile.academic
+    high_school = profile.high_school
     preferences = profile.preferences
 
-    has_course_grade = any(course.grade is not None for course in academic.courses)
+    has_course_grade = any(
+        course.grade is not None
+        and course.status not in {CourseStatus.IN_PROGRESS, CourseStatus.WITHDRAWN}
+        for course in academic.courses
+    )
     has_academic_evidence = bool(
         academic.gpas or academic.tests or academic.class_rank or has_course_grade
     )
@@ -60,12 +66,37 @@ def assess_profile(profile: StudentProfile) -> ProfileAssessment:
         )
 
     for index, course in enumerate(academic.courses):
-        if course.grade is None:
+        if course.status is CourseStatus.IN_PROGRESS:
+            warnings.append(
+                _warning(
+                    "course_in_progress",
+                    "In-progress course is recorded as rigor but not as a completed grade.",
+                    f"academic.courses.{index}",
+                    WarningSeverity.INFO,
+                )
+            )
+        elif course.grade is None and course.status is not CourseStatus.WITHDRAWN:
             warnings.append(
                 _warning(
                     "course_grade_missing",
                     "Course has no grade yet.",
                     f"academic.courses.{index}.grade",
+                    WarningSeverity.WARNING,
+                )
+            )
+
+        if (
+            high_school.stage is ApplicantStage.GAP_YEAR
+            and course.status is CourseStatus.IN_PROGRESS
+        ):
+            warnings.append(
+                _warning(
+                    "gap_year_in_progress_course",
+                    (
+                        "A gap-year profile contains an in-progress high-school course; "
+                        "confirm its status."
+                    ),
+                    f"academic.courses.{index}.status",
                     WarningSeverity.WARNING,
                 )
             )
@@ -97,6 +128,34 @@ def assess_profile(profile: StudentProfile) -> ProfileAssessment:
                 "Class size is needed to interpret class rank.",
                 "academic.class_size",
                 WarningSeverity.WARNING,
+            )
+        )
+
+    if high_school.stage is None:
+        warnings.append(
+            _warning(
+                "applicant_stage_missing",
+                "Select junior, senior, or gap-year applicant stage.",
+                "high_school.stage",
+                WarningSeverity.BLOCKING,
+            )
+        )
+    if high_school.graduation_year is None:
+        warnings.append(
+            _warning(
+                "graduation_year_missing",
+                "High-school graduation year is required.",
+                "high_school.graduation_year",
+                WarningSeverity.BLOCKING,
+            )
+        )
+    if high_school.academic_record_as_of is None:
+        warnings.append(
+            _warning(
+                "academic_record_date_missing",
+                "Record the date through which grades and courses are included.",
+                "high_school.academic_record_as_of",
+                WarningSeverity.INFO,
             )
         )
 

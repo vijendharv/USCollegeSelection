@@ -5,15 +5,23 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
+from app.models import DatasetVersion, Institution, InstitutionFilters
+
 
 class StorageError(RuntimeError):
     """A stable application error for storage operations."""
 
 
 class CollegeStore(Protocol):
-    """Boundary for public college data; DuckDB arrives in Milestone 1.3."""
+    """Boundary for public college data."""
 
     def healthcheck(self) -> bool: ...
+
+    def get_institution(self, unit_id: int) -> Institution | None: ...
+
+    def search_institutions(self, filters: InstitutionFilters) -> list[Institution]: ...
+
+    def current_dataset_version(self) -> DatasetVersion | None: ...
 
     def close(self) -> None: ...
 
