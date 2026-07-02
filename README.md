@@ -66,7 +66,7 @@ uv sync --all-groups
 uv run python -m app refresh-data
 ```
 
-Run `refresh-data` again after upgrading from Milestone 1.7. Database schema version 2 adds broad CIP program-family offerings used by major fit ranking.
+Run `refresh-data` again after upgrading. Database schema version 3 combines the institution and four-digit field-of-study College Scorecard archives with six-digit IPEDS bachelor-completion data. The three official downloads happen only during refresh; ranking remains local and offline.
 
 Then run the demo using the included synthetic student profile:
 
@@ -113,7 +113,7 @@ uv run python -m app demo \
 - College Scorecard is the latest available annual federal data, not live admissions data.
 - Many institutions do not report compatible GPA or test-score ranges, so they may be labeled Insufficient Data.
 - Major-specific admissions selectivity, current deadlines, fees, and supplements are not yet populated.
-- Major availability uses broad two-digit federal CIP families; it does not prove direct admission, program capacity, or program-specific selectivity.
+- Exact program availability uses six-digit IPEDS CIP data; ranking evidence uses four-digit Scorecard field-of-study outcomes and falls back to two-digit families when finer data is missing. None of these sources proves direct admission, program capacity, or program-specific selectivity.
 - Transcript and résumé PDF parsing begins in Stage 2; Milestone 1.7 accepts confirmed profile JSON.
 
 ## Documentation

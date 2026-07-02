@@ -12,7 +12,10 @@ from urllib.parse import urljoin, urlparse
 from app.networking import NetworkClient, NetworkError
 
 SCORECARD_DATA_PAGE = "https://collegescorecard.ed.gov/data/"
-_ARCHIVE_PATTERN = re.compile(r"Most-Recent-Cohorts-Institution[^/]*\.zip$", re.IGNORECASE)
+_INSTITUTION_ARCHIVE_PATTERN = re.compile(
+    r"Most-Recent-Cohorts-Institution[^/]*\.zip$", re.IGNORECASE
+)
+_FIELD_ARCHIVE_PATTERN = re.compile(r"Most-Recent-Cohorts-Field-of-Study[^/]*\.zip$", re.IGNORECASE)
 _RELEASE_DATE_PATTERN = re.compile(r"_(\d{2})(\d{2})(\d{4})\.zip$", re.IGNORECASE)
 
 
@@ -41,24 +44,35 @@ class ScorecardDataSource:
         self.data_page_url = data_page_url
 
     def discover_latest_archive_url(self) -> str:
+        return self._discover(_INSTITUTION_ARCHIVE_PATTERN, "institution")
+
+    def discover_latest_field_archive_url(self) -> str:
+        return self._discover(_FIELD_ARCHIVE_PATTERN, "field-of-study")
+
+    def _discover(self, pattern: re.Pattern[str], label: str) -> str:
         html, metadata = self.network.get_text(self.data_page_url)
         parser = _ArchiveLinkParser()
         parser.feed(html)
         matches = [
             urljoin(metadata.url, href)
             for href in parser.hrefs
-            if _ARCHIVE_PATTERN.search(urlparse(href).path)
+            if pattern.search(urlparse(href).path)
         ]
         if len(matches) != 1:
             raise NetworkError(
-                "Expected exactly one current institution archive on the College Scorecard page"
+                f"Expected exactly one current {label} archive on the College Scorecard page"
             )
         return matches[0]
 
     def download_latest(self) -> ScorecardDownload:
-        source_url = self.discover_latest_archive_url()
+        return self._download(self.discover_latest_archive_url(), _INSTITUTION_ARCHIVE_PATTERN)
+
+    def download_latest_field_of_study(self) -> ScorecardDownload:
+        return self._download(self.discover_latest_field_archive_url(), _FIELD_ARCHIVE_PATTERN)
+
+    def _download(self, source_url: str, pattern: re.Pattern[str]) -> ScorecardDownload:
         filename = Path(urlparse(source_url).path).name
-        if not _ARCHIVE_PATTERN.fullmatch(filename):
+        if not pattern.fullmatch(filename):
             raise NetworkError("College Scorecard archive filename was not recognized")
         destination = self.raw_data_dir / filename
         result = self.network.download_file(source_url, destination)

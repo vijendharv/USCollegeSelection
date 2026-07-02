@@ -35,6 +35,9 @@ class MajorFitResult(DomainModel):
     confidence: FitConfidence
     methodology_version: str
     cip_codes: list[str] = Field(default_factory=list)
+    availability_cip_code: str | None = None
+    ranking_cip_code: str | None = None
+    match_granularity: int | None = Field(default=None, ge=2, le=6)
     program_offered: bool | None
     components: list[FitComponent]
     missing_inputs: list[str] = Field(default_factory=list)

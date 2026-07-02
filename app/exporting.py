@@ -72,7 +72,7 @@ def render_pdf(report: CollegeReport) -> bytes:
         bottomMargin=0.55 * inch,
         title="US College Selection Report",
         author="US College Selection",
-        pageCompression=0,
+        pageCompression=1,
     )
     styles = getSampleStyleSheet()
     styles.add(
@@ -248,7 +248,10 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "Fit Score",
         "Fit Confidence",
         "Program Offered",
-        "CIP Families",
+        "CIP Match Level",
+        "Availability CIP6",
+        "Ranking CIP4",
+        "Mapped CIP Codes",
         "Academic Fit",
         "Major Fit",
         "Preferences",
@@ -273,7 +276,10 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 else "No"
                 if item.program_offered is False
                 else "Unknown",
-                f"'{', '.join(item.cip_codes)}",
+                item.match_granularity,
+                item.availability_cip_code,
+                item.ranking_cip_code,
+                ", ".join(item.cip_codes),
                 components.get("Academic fit"),
                 components.get("Major fit"),
                 components.get("Student preferences"),
@@ -284,12 +290,15 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
             ]
         )
     _write_table_sheet(sheet, "MajorRankingsTable", headers, rows)
-    for column in (5, 9, 10, 11, 12, 13):
+    for column in (5, 8, 12, 13, 14, 15, 16):
         for cell in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for value in cell:
                 value.number_format = "0.0"
     _classification_colors(sheet, f"C2:C{max(2, sheet.max_row)}", column="C")
-    _set_widths(sheet, [24, 30, 18, 12, 12, 14, 16, 14, 13, 13, 13, 13, 16, 38, 55])
+    _set_widths(
+        sheet,
+        [24, 30, 18, 12, 12, 14, 16, 14, 16, 14, 24, 13, 13, 13, 13, 16, 38, 55],
+    )
 
 
 def _gap_analysis_sheet(workbook: Workbook, report: CollegeReport) -> None:
@@ -609,7 +618,7 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
         content.append(Spacer(1, 8))
         content.append(Paragraph(_pdf_text(major), styles["SchoolTitle"]))
         data: list[list[Any]] = [
-            ["Rank", "Institution", "Category", "Fit", "Program", "Confidence"]
+            ["Rank", "Institution", "Category", "Fit", "Program", "CIP", "Confidence"]
         ]
         for item in (value for value in report.major_rankings if value.intended_major == major):
             data.append(
@@ -623,12 +632,21 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
                     else "No"
                     if item.program_offered is False
                     else "Unknown",
+                    f"{item.match_granularity}-digit" if item.match_granularity else "Unknown",
                     item.confidence.value.title(),
                 ]
             )
         table = PDFTable(
             data,
-            colWidths=[0.45 * inch, 2.35 * inch, 1.15 * inch, 0.55 * inch, 0.75 * inch, 0.8 * inch],
+            colWidths=[
+                0.45 * inch,
+                2.35 * inch,
+                1.15 * inch,
+                0.55 * inch,
+                0.75 * inch,
+                0.6 * inch,
+                0.8 * inch,
+            ],
             repeatRows=1,
         )
         table.setStyle(

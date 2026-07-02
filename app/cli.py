@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from app.config import Settings
-from app.data import ScorecardDataSource
+from app.data import IPEDSDataSource, ScorecardDataSource
 from app.demo import DemoError, run_offline_demo
 from app.logging_config import configure_logging
 from app.networking import HttpClient
@@ -89,13 +89,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             timeout_seconds=settings.request_timeout_seconds,
             max_response_bytes=settings.max_download_bytes,
         ) as network:
-            download = ScorecardDataSource(network, settings.raw_data_dir).download_latest()
+            scorecard = ScorecardDataSource(network, settings.raw_data_dir)
+            download = scorecard.download_latest()
+            field_download = scorecard.download_latest_field_of_study()
+            ipeds_download = IPEDSDataSource(
+                network, settings.raw_data_dir
+            ).download_latest_completions()
         with DuckDBCollegeStore(settings.college_database_path, read_only=False) as store:
             report = store.refresh_from_scorecard_zip(
                 download.archive_path,
                 source_url=download.source_url,
                 retrieved_at=download.retrieved_at,
                 release_date=download.release_date,
+                field_archive_path=field_download.archive_path,
+                ipeds_archive_path=ipeds_download.archive_path,
                 minimum_eligible_institutions=args.minimum_institutions,
             )
         print(report.model_dump_json())

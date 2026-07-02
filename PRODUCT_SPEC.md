@@ -224,7 +224,7 @@ The initial college universe consists of accredited, US, bachelor’s-granting i
 The system must:
 
 - use IPEDS `UNITID` as the canonical institution identifier;
-- map majors to Classification of Instructional Programs (CIP) codes;
+- map majors to reviewed six-digit Classification of Instructional Programs (CIP) codes, roll them up to four-digit Scorecard outcome fields, and retain two-digit families only as a labeled fallback;
 - distinguish campuses and admissions units rather than merging similarly named institutions;
 - exclude closed, non-degree, and ineligible institutions;
 - evaluate every user-entered school, even if it violates a preference or filter;

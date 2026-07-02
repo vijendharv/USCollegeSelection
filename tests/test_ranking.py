@@ -65,28 +65,36 @@ def _offerings() -> list[ProgramOffering]:
             unit_id=9001,
             cip_code="26",
             cip_title="Biological and Biomedical Sciences",
+            cip_level=2,
             share_of_awards=0.25,
+            source_name="fixture",
             dataset_version_id="test",
         ),
         ProgramOffering(
             unit_id=9001,
             cip_code="14",
             cip_title="Engineering",
+            cip_level=2,
             share_of_awards=0.01,
+            source_name="fixture",
             dataset_version_id="test",
         ),
         ProgramOffering(
             unit_id=9002,
             cip_code="26",
             cip_title="Biological and Biomedical Sciences",
+            cip_level=2,
             share_of_awards=0.01,
+            source_name="fixture",
             dataset_version_id="test",
         ),
         ProgramOffering(
             unit_id=9002,
             cip_code="14",
             cip_title="Engineering",
+            cip_level=2,
             share_of_awards=0.25,
+            source_name="fixture",
             dataset_version_id="test",
         ),
     ]
@@ -125,3 +133,40 @@ def test_resume_context_does_not_change_admissions_categories() -> None:
         AdmissionCategory.TARGET,
         AdmissionCategory.TARGET,
     ]
+
+
+def test_six_digit_availability_and_four_digit_outcomes_are_combined() -> None:
+    offerings = [
+        *_offerings(),
+        ProgramOffering(
+            unit_id=9001,
+            cip_code="260101",
+            cip_title="CIP 26.0101",
+            cip_level=6,
+            credential_level=3,
+            completion_count=40,
+            source_name="IPEDS Completions",
+            dataset_version_id="test",
+        ),
+        ProgramOffering(
+            unit_id=9001,
+            cip_code="2601",
+            cip_title="Biology General",
+            cip_level=4,
+            credential_level=3,
+            completion_count=45,
+            median_earnings_1yr=65000,
+            source_name="College Scorecard field of study",
+            dataset_version_id="test",
+        ),
+    ]
+
+    ranked, _ = rank_major_fits(_profile(), _schools(), offerings)
+    biology = next(
+        item for item in ranked if item.unit_id == 9001 and item.intended_major == "Biology"
+    )
+
+    assert biology.program_offered is True
+    assert biology.match_granularity == 6
+    assert biology.availability_cip_code == "260101"
+    assert biology.ranking_cip_code == "2601"
