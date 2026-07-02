@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.9.0
+**Version:** 1.0.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -510,6 +510,10 @@ Deliverables:
 - Verify that PDF, Excel, and canonical report values agree.
 
 Complete when automated tests inspect workbook structure, PDF text, and cross-format consistency.
+
+Both renderers accept only the canonical `CollegeReport` and return bytes. They do not query DuckDB, call the network, or recalculate classifications. The export service publishes those bytes through `SessionFileStore`, which validates filenames, writes atomically into a private session directory, and applies owner-only permissions.
+
+The Excel renderer uses the five required sheets, native tables and filters, frozen headers, typed dates/currency/percentages, bounded widths, hyperlinks, application-tracker validation, and formula-injection escaping for externally derived text. The PDF renderer uses repeating comparison headers, explicit page breaks, page numbers, print-safe colors, sources, methodology, generated time, missing data, warnings, and the report disclaimer. Automated tests compare school names and categories back to the canonical model; rendered sample artifacts receive visual inspection before the milestone is released.
 
 #### Milestone 1.7 — Offline end-to-end demo
 
