@@ -64,6 +64,7 @@ class ClassificationRule(DomainModel):
     standing: AcademicStanding | None = None
     student_value: str | None = None
     school_benchmark: str | None = None
+    numeric_gap: Decimal | None = None
 
 
 class ClassificationResult(DomainModel):

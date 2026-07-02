@@ -122,6 +122,7 @@ def _compare_gpa(
                 standing=standing,
                 student_value=f"{gpa.value}/{gpa.scale}",
                 school_benchmark=f"{school.low}-{school.high}/{school.scale}",
+                numeric_gap=_range_gap(gpa.value, school.low, school.high),
             ),
             standing,
         )
@@ -243,6 +244,7 @@ def _test_signal(name: str, value: Decimal, low: Decimal, high: Decimal) -> _Sig
             standing=standing,
             student_value=str(value),
             school_benchmark=f"{low}-{high}",
+            numeric_gap=_range_gap(value, low, high),
         ),
         standing,
     )
@@ -254,6 +256,14 @@ def _standing(value: Decimal, low: Decimal, high: Decimal) -> AcademicStanding:
     if value > high:
         return AcademicStanding.ABOVE
     return AcademicStanding.WITHIN
+
+
+def _range_gap(value: Decimal, low: Decimal, high: Decimal) -> Decimal:
+    if value < low:
+        return value - low
+    if value > high:
+        return value - high
+    return Decimal(0)
 
 
 def _best_total(scores: list[TestScore], test: StandardizedTest) -> TestScore | None:

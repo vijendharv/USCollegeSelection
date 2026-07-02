@@ -19,7 +19,7 @@ Each completed milestone should document:
 | 1.2 Student profile and manual academics | Complete | [1.2 Student profile and manual academics](1.2-student-profile.md) |
 | 1.3 College data slice | Complete | [1.3 College Scorecard data](1.3-college-scorecard-data.md) |
 | 1.4 Classification engine v1 | Complete | [1.4 Classification engine v1](1.4-classification-engine.md) |
-| 1.5 Gap analysis and report model | Not started | — |
+| 1.5 Gap analysis and report model | Complete | [1.5 Gap analysis and report model](1.5-gap-analysis-report.md) |
 | 1.6 PDF and Excel exports | Not started | — |
 | 1.7 Offline end-to-end demo | Not started | — |
 
