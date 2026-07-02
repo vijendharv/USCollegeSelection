@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from app.models import DatasetVersion, Institution, InstitutionFilters
+from app.models import DatasetVersion, Institution, InstitutionFilters, ProgramOffering
 
 
 class StorageError(RuntimeError):
@@ -20,6 +20,8 @@ class CollegeStore(Protocol):
     def get_institution(self, unit_id: int) -> Institution | None: ...
 
     def search_institutions(self, filters: InstitutionFilters) -> list[Institution]: ...
+
+    def get_program_offerings(self, unit_ids: list[int]) -> list[ProgramOffering]: ...
 
     def current_dataset_version(self) -> DatasetVersion | None: ...
 

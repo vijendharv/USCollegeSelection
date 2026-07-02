@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from app.models import DatasetVersion, Institution, InstitutionFilters
+from app.models import DatasetVersion, Institution, InstitutionFilters, ProgramOffering
 from app.networking import DownloadResult, ResponseMetadata
 
 
@@ -46,6 +46,10 @@ class FakeCollegeStore:
 
     def search_institutions(self, filters: InstitutionFilters) -> list[Institution]:
         del filters
+        return []
+
+    def get_program_offerings(self, unit_ids: list[int]) -> list[ProgramOffering]:
+        del unit_ids
         return []
 
     def current_dataset_version(self) -> DatasetVersion | None:

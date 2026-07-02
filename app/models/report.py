@@ -12,6 +12,7 @@ from pydantic import Field
 from app.models.base import DomainModel
 from app.models.classification import AdmissionsBenchmark, ClassificationResult
 from app.models.college import DatasetVersion, Institution
+from app.models.ranking import ConsolidatedFitResult, MajorFitResult
 from app.models.student import StudentProfile
 
 
@@ -68,11 +69,14 @@ class HolisticContext(DomainModel):
 
 
 class CollegeReport(DomainModel):
-    report_version: Literal["1.0"] = "1.0"
+    report_version: Literal["1.1"] = "1.1"
     generated_at: datetime
     methodology_version: str
     student_profile: StudentProfile
     dataset: DatasetVersion
     schools: list[SchoolReport]
+    major_rankings: list[MajorFitResult] = Field(default_factory=list)
+    consolidated_rankings: list[ConsolidatedFitResult] = Field(default_factory=list)
+    fit_methodology_version: str | None = None
     holistic_context: HolisticContext = Field(default_factory=HolisticContext)
     disclaimer: str

@@ -49,6 +49,26 @@
       }
     ]
   },
+  "holistic": {
+    "themes": [
+      "computing",
+      "technology",
+      "leadership"
+    ],
+    "activities": [
+      {
+        "name": "Robotics Club",
+        "role": "Programming lead",
+        "duration": "2 years",
+        "hours_per_week": "4",
+        "themes": [
+          "computing",
+          "engineering",
+          "leadership"
+        ]
+      }
+    ]
+  },
   "preferences": {
     "residence_state": "CA",
     "intended_entry_year": 2027,

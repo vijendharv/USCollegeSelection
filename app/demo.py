@@ -12,15 +12,16 @@ from pydantic import ValidationError
 
 from app.exporting import export_college_report
 from app.models import (
-    AdmissionCategory,
     ExportFormat,
     Institution,
     InstitutionFilters,
+    MajorFitResult,
     ReportCandidate,
     SchoolReport,
     StudentProfile,
     assess_profile,
 )
+from app.ranking import FIT_METHODOLOGY_VERSION, rank_major_fits
 from app.reporting import build_college_report
 from app.storage import DuckDBCollegeStore, LocalSessionFileStore, StorageError
 
@@ -76,6 +77,9 @@ def run_offline_demo(
     with DuckDBCollegeStore(database_path) as college_store:
         institutions = _load_all_institutions(college_store)
         dataset = college_store.current_dataset_version()
+        offerings = college_store.get_program_offerings(
+            [institution.unit_id for institution in institutions]
+        )
     if dataset is None or not institutions:
         raise DemoError("Demo college database contains no usable institutions")
 
@@ -97,12 +101,40 @@ def run_offline_demo(
         dataset,
         generated_at=generated_at or datetime.now(UTC),
     )
+    major_rankings, consolidated_rankings = rank_major_fits(
+        profile, complete_report.schools, offerings
+    )
+    selected_rankings = _selected_major_rankings(
+        complete_report.schools,
+        major_rankings,
+        schools_per_category=schools_per_category,
+    )
+    selected_ids = {result.unit_id for result in selected_rankings}
+    selected_ids.update(
+        school.institution.unit_id for school in complete_report.schools if school.user_entered
+    )
+    best_rank = {
+        unit_id: min(item.rank for item in selected_rankings if item.unit_id == unit_id)
+        for unit_id in selected_ids
+    }
     report = complete_report.model_copy(
         update={
-            "schools": _balanced_school_list(
-                complete_report.schools,
-                schools_per_category=schools_per_category,
-            )
+            "schools": sorted(
+                (
+                    school
+                    for school in complete_report.schools
+                    if school.institution.unit_id in selected_ids
+                ),
+                key=lambda school: (
+                    best_rank.get(school.institution.unit_id, 10_000),
+                    school.institution.unit_id,
+                ),
+            ),
+            "major_rankings": selected_rankings,
+            "consolidated_rankings": [
+                result for result in consolidated_rankings if result.unit_id in selected_ids
+            ][:10],
+            "fit_methodology_version": FIT_METHODOLOGY_VERSION,
         }
     )
 
@@ -131,6 +163,9 @@ def run_offline_demo(
         "matching_institutions": len(complete_report.schools),
         "reported_schools": len(report.schools),
         "category_counts": dict(sorted(counts.items())),
+        "fit_ranked": True,
+        "fit_methodology_version": FIT_METHODOLOGY_VERSION,
+        "major_rankings": len(report.major_rankings),
         "output_directory": str(output_directory),
         "files": [file.path for file in exports.files] + [str(report_path)],
     }
@@ -161,21 +196,20 @@ def _load_all_institutions(store: DuckDBCollegeStore) -> list[Institution]:
         offset += len(page)
 
 
-def _balanced_school_list(
+def _selected_major_rankings(
     schools: list[SchoolReport],
+    rankings: list[MajorFitResult],
     *,
     schools_per_category: int,
-) -> list[SchoolReport]:
-    selected: list[SchoolReport] = []
-    selected_ids: set[int] = set()
-    for category in AdmissionCategory:
-        matching = [school for school in schools if school.classification.category is category]
-        for school in matching[:schools_per_category]:
-            selected.append(school)
-            selected_ids.add(school.institution.unit_id)
-    for school in schools:
-        if school.user_entered and school.institution.unit_id not in selected_ids:
-            selected.append(school)
+) -> list[MajorFitResult]:
+    selected = [item for item in rankings if item.rank <= schools_per_category]
+    user_ids = {school.institution.unit_id for school in schools if school.user_entered}
+    selected_keys = {(item.unit_id, item.intended_major) for item in selected}
+    selected.extend(
+        item
+        for item in rankings
+        if item.unit_id in user_ids and (item.unit_id, item.intended_major) not in selected_keys
+    )
     return selected
 
 

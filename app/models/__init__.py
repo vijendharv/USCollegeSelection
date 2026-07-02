@@ -35,14 +35,22 @@ from app.models.college import (
     Institution,
     InstitutionFilters,
     Ownership,
+    ProgramOffering,
     RefreshReport,
 )
 from app.models.export import ExportedFile, ExportFormat, ExportResult
+from app.models.holistic import Activity, HolisticProfile
 from app.models.preferences import (
     BudgetType,
     EntryTerm,
     StudentPreferences,
     TestSubmissionPlan,
+)
+from app.models.ranking import (
+    ConsolidatedFitResult,
+    FitComponent,
+    FitConfidence,
+    MajorFitResult,
 )
 from app.models.report import (
     CollegeReport,
@@ -58,6 +66,7 @@ from app.models.student import StudentProfile
 __all__ = [
     "AcademicRecord",
     "AcademicStanding",
+    "Activity",
     "AdmissionCategory",
     "AdmissionsBenchmark",
     "ApplicantStage",
@@ -67,6 +76,7 @@ __all__ = [
     "ClassificationRule",
     "CollegeReport",
     "ComparisonRow",
+    "ConsolidatedFitResult",
     "Course",
     "CourseLevel",
     "CourseStatus",
@@ -75,6 +85,8 @@ __all__ = [
     "ExportFormat",
     "ExportResult",
     "ExportedFile",
+    "FitComponent",
+    "FitConfidence",
     "GPABenchmark",
     "GPARecord",
     "GPAScope",
@@ -83,11 +95,14 @@ __all__ = [
     "Grade",
     "HighSchoolContext",
     "HolisticContext",
+    "HolisticProfile",
     "Institution",
     "InstitutionFilters",
+    "MajorFitResult",
     "Ownership",
     "ProfileAssessment",
     "ProfileWarning",
+    "ProgramOffering",
     "RecordSource",
     "RefreshReport",
     "ReportCandidate",

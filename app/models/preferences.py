@@ -92,7 +92,7 @@ class StudentPreferences(DomainModel):
     residence_state: str | None = None
     intended_entry_year: int | None = Field(default=None, ge=2020, le=2200)
     intended_entry_term: EntryTerm | None = None
-    intended_majors: list[PreferenceText] = Field(default_factory=list)
+    intended_majors: list[PreferenceText] = Field(default_factory=list, max_length=3)
     annual_budget: Decimal | None = Field(default=None, ge=0)
     budget_type: BudgetType | None = None
     preferred_states: list[str] = Field(default_factory=list)

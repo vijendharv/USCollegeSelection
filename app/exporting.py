@@ -44,12 +44,13 @@ _THIN_GRAY = Side(style="thin", color="D9E1F2")
 
 
 def render_excel(report: CollegeReport) -> bytes:
-    """Create the required five-sheet workbook in memory."""
+    """Create the report workbook in memory."""
     workbook = Workbook()
     active_sheet = workbook.active
     if active_sheet is not None:
         workbook.remove(active_sheet)
     _college_list_sheet(workbook, report)
+    _major_rankings_sheet(workbook, report)
     _gap_analysis_sheet(workbook, report)
     _student_profile_sheet(workbook, report)
     _application_tracker_sheet(workbook, report)
@@ -117,6 +118,9 @@ def render_pdf(report: CollegeReport) -> bytes:
         Paragraph(_pdf_text(report.disclaimer), styles["Small"]),
         PageBreak(),
     ]
+    story.extend(_pdf_major_ranking_sections(report, styles))
+    if report.major_rankings:
+        story.append(PageBreak())
     for index, school in enumerate(report.schools):
         category = school.classification.category.value.replace("_", " ").title()
         story.extend(
@@ -232,6 +236,60 @@ def _college_list_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 cell.number_format = '"$"#,##0'
     _classification_colors(sheet, f"B2:B{max(2, sheet.max_row)}")
     _set_widths(sheet, [30, 18, 12, 12, 16, 8, 15, 18, 17, 15, 28, 38, 38])
+
+
+def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
+    sheet = workbook.create_sheet("Major Rankings")
+    headers = [
+        "Intended Major",
+        "Institution",
+        "Classification",
+        "Major Rank",
+        "Fit Score",
+        "Fit Confidence",
+        "Program Offered",
+        "CIP Families",
+        "Academic Fit",
+        "Major Fit",
+        "Preferences",
+        "Outcomes",
+        "Holistic Alignment",
+        "Missing Data",
+        "Explanation",
+    ]
+    rows: list[list[Any]] = []
+    for item in report.major_rankings:
+        components = {component.name: component.score for component in item.components}
+        rows.append(
+            [
+                _excel_text(item.intended_major),
+                _excel_text(item.institution_name),
+                item.category.value.replace("_", " ").title(),
+                item.rank,
+                float(item.overall_score),
+                item.confidence.value.title(),
+                "Yes"
+                if item.program_offered is True
+                else "No"
+                if item.program_offered is False
+                else "Unknown",
+                f"'{', '.join(item.cip_codes)}",
+                components.get("Academic fit"),
+                components.get("Major fit"),
+                components.get("Student preferences"),
+                components.get("Outcomes"),
+                components.get("Holistic alignment"),
+                _excel_text("; ".join(item.missing_inputs)),
+                _excel_text(item.explanation),
+            ]
+        )
+    _write_table_sheet(sheet, "MajorRankingsTable", headers, rows)
+    for column in (5, 9, 10, 11, 12, 13):
+        for cell in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
+            for value in cell:
+                value.number_format = "0.0"
+    _classification_colors(sheet, f"C2:C{max(2, sheet.max_row)}", column="C")
+    _set_widths(sheet, [24, 30, 18, 12, 12, 14, 16, 14, 13, 13, 13, 13, 16, 38, 55])
 
 
 def _gap_analysis_sheet(workbook: Workbook, report: CollegeReport) -> None:
@@ -390,6 +448,17 @@ def _sources_sheet(workbook: Workbook, report: CollegeReport) -> None:
             f"Dataset version {report.dataset.version_id}",
         ]
     ]
+    if report.fit_methodology_version:
+        rows.append(
+            [
+                "Fit ranking",
+                "Internal transparent fit methodology",
+                "",
+                None,
+                report.fit_methodology_version,
+                "Major-specific fit rank; admissions categories remain institution-level.",
+            ]
+        )
     seen: set[tuple[str, str | None, Any]] = set()
     for item in report.schools:
         for source in item.source_references:
@@ -455,7 +524,7 @@ def _write_table_sheet(sheet: Any, name: str, headers: list[str], rows: list[lis
             cell.border = Border(bottom=_THIN_GRAY)
 
 
-def _classification_colors(sheet: Any, cell_range: str) -> None:
+def _classification_colors(sheet: Any, cell_range: str, *, column: str = "B") -> None:
     for text, color in (
         ("Safety Likely", _GREEN),
         ("Target", _BLUE),
@@ -465,7 +534,7 @@ def _classification_colors(sheet: Any, cell_range: str) -> None:
         sheet.conditional_formatting.add(
             cell_range,
             FormulaRule(  # type: ignore[no-untyped-call]
-                formula=[f'EXACT(B2,"{text}")'],
+                formula=[f'EXACT({column}2,"{text}")'],
                 fill=PatternFill("solid", fgColor=color),
             ),
         )
@@ -520,6 +589,68 @@ def _pdf_summary(report: CollegeReport, styles: Any) -> PDFTable:
         )
     )
     return table
+
+
+def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]:
+    if not report.major_rankings:
+        return []
+    content: list[Any] = [Paragraph("Fit rankings by intended major", styles["SchoolTitle"])]
+    content.append(
+        Paragraph(
+            "Fit ranks are major-specific. Admissions categories remain institution-level unless "
+            "a sourced program-specific rate is available.",
+            styles["Small"],
+        )
+    )
+    majors = list(dict.fromkeys(item.intended_major for item in report.major_rankings))
+    for major_index, major in enumerate(majors):
+        if major_index:
+            content.append(PageBreak())
+        content.append(Spacer(1, 8))
+        content.append(Paragraph(_pdf_text(major), styles["SchoolTitle"]))
+        data: list[list[Any]] = [
+            ["Rank", "Institution", "Category", "Fit", "Program", "Confidence"]
+        ]
+        for item in (value for value in report.major_rankings if value.intended_major == major):
+            data.append(
+                [
+                    item.rank,
+                    Paragraph(_pdf_text(item.institution_name), styles["Small"]),
+                    item.category.value.replace("_", " ").title(),
+                    str(item.overall_score),
+                    "Yes"
+                    if item.program_offered is True
+                    else "No"
+                    if item.program_offered is False
+                    else "Unknown",
+                    item.confidence.value.title(),
+                ]
+            )
+        table = PDFTable(
+            data,
+            colWidths=[0.45 * inch, 2.35 * inch, 1.15 * inch, 0.55 * inch, 0.75 * inch, 0.8 * inch],
+            repeatRows=1,
+        )
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(f"#{_NAVY}")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor(f"#{_LIGHT}")],
+                    ),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D9E1F2")),
+                ]
+            )
+        )
+        content.append(table)
+    return content
 
 
 def _pdf_comparisons(comparisons: list[Any], styles: Any) -> PDFTable:
@@ -577,8 +708,6 @@ def _pdf_sources(sources: list[Any], styles: Any) -> list[Any]:
 
 def _pdf_footer(canvas: Any, document: Any) -> None:
     canvas.saveState()
-    canvas.setFillColor(colors.white)
-    canvas.rect(0, 0, letter[0], letter[1], fill=1, stroke=0)
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(colors.HexColor("#666666"))
     canvas.drawString(0.55 * inch, 0.3 * inch, "US College Selection")

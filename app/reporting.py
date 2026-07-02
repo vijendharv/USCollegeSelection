@@ -47,7 +47,11 @@ def build_college_report(
         student_profile=student,
         dataset=dataset,
         schools=schools,
-        holistic_context=holistic_context or HolisticContext(),
+        holistic_context=holistic_context
+        or HolisticContext(
+            themes=student.holistic.themes,
+            strengths=[activity.name for activity in student.holistic.activities],
+        ),
         disclaimer=DISCLAIMER,
     )
 
