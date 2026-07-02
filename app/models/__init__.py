@@ -37,6 +37,7 @@ from app.models.college import (
     Ownership,
     RefreshReport,
 )
+from app.models.export import ExportedFile, ExportFormat, ExportResult
 from app.models.preferences import (
     BudgetType,
     EntryTerm,
@@ -71,6 +72,9 @@ __all__ = [
     "CourseStatus",
     "DatasetVersion",
     "EntryTerm",
+    "ExportFormat",
+    "ExportResult",
+    "ExportedFile",
     "GPABenchmark",
     "GPARecord",
     "GPAScope",

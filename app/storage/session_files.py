@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from uuid import uuid4
 
 from app.storage.contracts import StorageError
 
 _SESSION_ID = re.compile(r"^[0-9a-f]{32}$")
+_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 class LocalSessionFileStore:
@@ -37,3 +39,24 @@ class LocalSessionFileStore:
         path = self.session_path(session_id)
         if path.exists():
             shutil.rmtree(path)
+
+    def write_file(self, session_id: str, filename: str, content: bytes) -> Path:
+        """Atomically write one generated file inside an existing session."""
+        if not _FILENAME.fullmatch(filename):
+            raise StorageError("Invalid session filename")
+        directory = self.session_path(session_id)
+        if not directory.is_dir():
+            raise StorageError("Session does not exist")
+        destination = directory / filename
+        temporary: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=directory, delete=False) as handle:
+                temporary = Path(handle.name)
+                handle.write(content)
+                handle.flush()
+            temporary.replace(destination)
+            destination.chmod(0o600)
+            return destination
+        finally:
+            if temporary is not None and temporary.exists():
+                temporary.unlink()
