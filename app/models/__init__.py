@@ -43,6 +43,15 @@ from app.models.preferences import (
     StudentPreferences,
     TestSubmissionPlan,
 )
+from app.models.report import (
+    CollegeReport,
+    ComparisonRow,
+    GapStatus,
+    HolisticContext,
+    ReportCandidate,
+    SchoolReport,
+    SourceReference,
+)
 from app.models.student import StudentProfile
 
 __all__ = [
@@ -55,6 +64,8 @@ __all__ = [
     "ClassificationConfidence",
     "ClassificationResult",
     "ClassificationRule",
+    "CollegeReport",
+    "ComparisonRow",
     "Course",
     "CourseLevel",
     "CourseStatus",
@@ -64,8 +75,10 @@ __all__ = [
     "GPARecord",
     "GPAScope",
     "GPAType",
+    "GapStatus",
     "Grade",
     "HighSchoolContext",
+    "HolisticContext",
     "Institution",
     "InstitutionFilters",
     "Ownership",
@@ -73,6 +86,9 @@ __all__ = [
     "ProfileWarning",
     "RecordSource",
     "RefreshReport",
+    "ReportCandidate",
+    "SchoolReport",
+    "SourceReference",
     "StandardizedTest",
     "StudentPreferences",
     "StudentProfile",

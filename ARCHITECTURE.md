@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.8.0
+**Version:** 0.9.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -495,6 +495,10 @@ Deliverables:
 - Include user-entered schools even when they fail matching preferences.
 
 Complete when a saved report fixture contains reproducible results for at least one school in every classification category.
+
+The canonical `CollegeReport` is the only input to later screen, PDF, and Excel renderers. It contains the confirmed profile, dataset provenance, generation time, methodology version, holistic context, disclaimer, and one `SchoolReport` per candidate. Each school report retains the institution and classification plus comparison rows, strengths, gaps, unknowns, warnings, and source references.
+
+Academic rows carry the student value, published range, numeric distance to the nearest range boundary, status, and sources. Cost comparison follows the user's declared budget meaning: net-price budgets use average net price with a non-personalized warning, published-cost budgets prefer cost of attendance, and out-of-pocket budgets remain unknown until a student-specific estimate exists. A missing budget is visible but never penalizes a school. User-entered schools are deduplicated by UNITID but always retained even when a geography preference would normally filter them.
 
 #### Milestone 1.6 — PDF and Excel exports
 
