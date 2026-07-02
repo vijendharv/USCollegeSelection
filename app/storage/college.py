@@ -390,6 +390,7 @@ class DuckDBCollegeStore:
                 FROM scorecard_raw
                 WHERE TRY_CAST(CURROPER AS INTEGER) = 1
                   AND TRY_CAST(HIGHDEG AS INTEGER) IN (3, 4)
+                  AND TRY_CAST(UGDS AS DOUBLE) > 0
                 """,
                 [version_id],
             )
@@ -476,6 +477,11 @@ class DuckDBCollegeStore:
                 "missing identity fields",
                 """SELECT COUNT(*) FROM institutions
                    WHERE unit_id IS NULL OR name = '' OR city = '' OR length(state) != 2""",
+            ),
+            (
+                "missing undergraduate enrollment",
+                """SELECT COUNT(*) FROM institutions
+                   WHERE undergraduate_enrollment IS NULL OR undergraduate_enrollment <= 0""",
             ),
             (
                 "invalid acceptance rates",

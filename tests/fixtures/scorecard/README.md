@@ -7,4 +7,4 @@
 - Source last updated: 2026-06-10
 - Fixture created: 2026-07-01
 
-The rows and values are real public data. Only columns used by the initial DuckDB schema and a small set of institutions are retained so tests remain fast and offline. Pasadena City College verifies that institutions whose highest degree is below a bachelor's degree are excluded. Colegio Universitario de San Juan preserves a real negative net-price sentinel to verify that invalid costs become null.
+The rows and values are real public data. Only columns used by the initial DuckDB schema and a small set of institutions are retained so tests remain fast and offline. Pasadena City College verifies that institutions whose highest degree is below a bachelor's degree are excluded. UC College of the Law San Francisco verifies that graduate-only institutions with no undergraduate enrollment are excluded. Colegio Universitario de San Juan preserves a real negative net-price sentinel to verify that invalid costs become null.

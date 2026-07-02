@@ -49,7 +49,7 @@ def test_refresh_builds_valid_database_from_frozen_public_data(tmp_path: Path) -
         )
 
         assert store.healthcheck()
-        assert report.dataset.raw_row_count == 7
+        assert report.dataset.raw_row_count == 8
         assert report.dataset.eligible_row_count == 6
         assert report.dataset.release_date == date(2026, 6, 10)
 
@@ -61,6 +61,7 @@ def test_refresh_builds_valid_database_from_frozen_public_data(tmp_path: Path) -
         assert harvard.acceptance_rate == pytest.approx(0.0365)
         assert harvard.average_net_price == 19066
         assert store.get_institution(121044) is None
+        assert store.get_institution(110398) is None
         colegio = store.get_institution(241720)
         assert colegio is not None
         assert colegio.average_net_price is None

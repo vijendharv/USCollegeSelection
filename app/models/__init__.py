@@ -14,6 +14,7 @@ from app.models.academic import (
     Term,
     TestScore,
 )
+from app.models.applicant import ApplicantStage, HighSchoolContext
 from app.models.assessment import (
     ProfileAssessment,
     ProfileWarning,
@@ -37,6 +38,7 @@ from app.models.student import StudentProfile
 
 __all__ = [
     "AcademicRecord",
+    "ApplicantStage",
     "BudgetType",
     "Course",
     "CourseLevel",
@@ -47,6 +49,7 @@ __all__ = [
     "GPAScope",
     "GPAType",
     "Grade",
+    "HighSchoolContext",
     "Institution",
     "InstitutionFilters",
     "Ownership",

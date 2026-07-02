@@ -23,12 +23,13 @@ from app.models import (
 
 
 def test_single_partial_course_preserves_only_entered_values() -> None:
-    course = Course(subject="Mathematics", grade=Grade(original="A-"))
+    course = Course(subject="Mathematics", grade_level=11, grade=Grade(original="A-"))
 
     payload = course.model_dump(mode="json", exclude_none=True)
 
     assert payload["subject"] == "Mathematics"
     assert payload["grade"] == {"original": "A-"}
+    assert payload["grade_level"] == 11
     assert "name" not in payload
     assert payload["level"] == "unknown"
 

@@ -1,6 +1,6 @@
 # US College Selection — Product Specification
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 **Status:** Initial draft  
 **Last updated:** 2026-06-30
 
@@ -53,6 +53,8 @@ The product is decision support, not an admissions predictor. It must never desc
 
 ### 6.1 Required fields
 
+- Applicant stage: junior, senior, or gap year.
+- Expected or actual high-school graduation year.
 - State of residence.
 - Intended entry year and term.
 - At least one intended major or broad field of study.
@@ -60,6 +62,7 @@ The product is decision support, not an admissions predictor. It must never desc
 
 ### 6.2 Optional fields
 
+- Academic-record as-of date.
 - SAT and ACT scores, including section scores and test dates.
 - Whether the student plans to submit test scores.
 - Class rank, class size, or class percentile.
@@ -84,7 +87,7 @@ Manual entry is a first-class alternative to transcript upload, not merely an er
 The user must be able to enter as much available information as needed, including:
 
 - cumulative GPA, GPA scale, and weighted/unweighted/unknown status;
-- school year and term;
+- grade level, school year, and term;
 - subject area and course name;
 - course level, including regular, honors, AP, IB, or dual enrollment;
 - grade, grading scale, credits attempted, and credits earned;
@@ -94,6 +97,16 @@ The user must be able to enter as much available information as needed, includin
 - free-form academic context or grading notes.
 
 Users must be able to add, edit, duplicate, and remove course rows and save a partial profile. Unknown fields remain blank; the app must not require users to invent values. Before analysis, the app summarizes the entered record and warns when missing information materially lowers classification confidence.
+
+### 6.4 Academic timing
+
+The product evaluates only first-year undergraduate applicants using high-school records:
+
+- A junior profile is evaluated through the latest completed or in-progress junior-year work and is not penalized for absent senior-year grades.
+- A senior profile may include senior courses in progress. Those courses count as planned rigor but not as completed grade evidence.
+- A gap-year profile uses the completed high-school transcript. Any course still marked in progress must be confirmed or corrected before relying on it.
+- Grade level and the academic-record as-of date remain attached to the record so missing work is interpreted for the student's stage.
+- College coursework after high-school graduation is not treated as a first-year high-school record.
 
 ## 7. Transcript upload and extraction
 
@@ -206,7 +219,7 @@ Résumé content must not be converted into a fabricated numerical admissions ad
 
 ## 9. College universe and matching
 
-The initial college universe consists of accredited, US, bachelor’s-granting institutions that admit first-year undergraduates.
+The initial college universe consists of accredited, US, bachelor’s-granting institutions that admit first-year undergraduates. A school must report positive undergraduate enrollment; offering graduate degrees alone does not make it eligible.
 
 The system must:
 

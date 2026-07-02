@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 0.6.0
+**Version:** 0.7.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -196,6 +196,7 @@ Each parsed course uses fields such as:
 ```text
 course_name
 subject
+grade_level: 9 | 10 | 11 | 12
 academic_year
 term
 grade_original
@@ -221,6 +222,8 @@ conversion_rule_version
 ```
 
 Never modify a reported GPA by adding AP or Honors points. Any optional app-calculated comparison GPA is stored separately, is reproducible from a versioned conversion rule, and is never presented as the high school's GPA.
+
+The confirmed profile also carries an applicant stage (`JUNIOR`, `SENIOR`, or `GAP_YEAR`), expected or actual graduation year, and academic-record as-of date. Junior profiles are not expected to contain senior-year work. Senior in-progress courses inform rigor but not completed-grade calculations. Gap-year profiles are expected to represent a completed high-school record and flag any remaining in-progress course for confirmation.
 
 #### Manual path
 
@@ -461,6 +464,7 @@ Deliverables:
 
 - Define the initial DuckDB schema and dataset-version metadata.
 - Download and import the latest complete real College Scorecard institution dataset through the networking and storage layers.
+- Retain only operating bachelor-or-higher institutions with positive undergraduate enrollment.
 - Implement institution lookup, basic filters, cost fields, admissions fields, and source metadata.
 - Add a refresh command that validates and replaces the real-data tables atomically.
 

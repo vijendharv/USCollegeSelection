@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from pydantic import Field
 
 from app.models.academic import AcademicRecord
+from app.models.applicant import HighSchoolContext
 from app.models.base import DomainModel
 from app.models.preferences import StudentPreferences
 
@@ -17,5 +18,6 @@ class StudentProfile(DomainModel):
 
     schema_version: Literal["1.0"] = "1.0"
     profile_id: UUID = Field(default_factory=uuid4)
+    high_school: HighSchoolContext = Field(default_factory=HighSchoolContext)
     academic: AcademicRecord = Field(default_factory=AcademicRecord)
     preferences: StudentPreferences = Field(default_factory=StudentPreferences)
