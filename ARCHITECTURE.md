@@ -534,6 +534,7 @@ The demo scans the local institution database, applies confirmed geographic pref
 Deliverables:
 
 - Replace first-in-database category truncation with a deterministic, versioned fit rank.
+- Require one intended major and allow at most three in student-defined priority order; reject larger lists rather than silently truncating them.
 - Rank each `student × institution × intended major` combination independently within Safety / Likely, Target, Reach, and Insufficient Data without changing the institution-level admissions classification.
 - Add free federal program-of-study data using CIP codes so intended-major availability is a real school-specific signal.
 - Represent confirmed résumé themes as structured holistic context rather than unscored prose.
