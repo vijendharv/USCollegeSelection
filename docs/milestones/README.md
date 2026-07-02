@@ -21,6 +21,6 @@ Each completed milestone should document:
 | 1.4 Classification engine v1 | Complete | [1.4 Classification engine v1](1.4-classification-engine.md) |
 | 1.5 Gap analysis and report model | Complete | [1.5 Gap analysis and report model](1.5-gap-analysis-report.md) |
 | 1.6 PDF and Excel exports | Complete | [1.6 PDF and Excel exports](1.6-pdf-excel-exports.md) |
-| 1.7 Offline end-to-end demo | Not started | — |
+| 1.7 Local end-to-end demo | Complete | [1.7 Local end-to-end demo](1.7-offline-demo.md) |
 
 Use [TEMPLATE.md](TEMPLATE.md) when completing the next milestone.

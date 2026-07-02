@@ -1,6 +1,6 @@
 # US College Selection — Simple Architecture
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Status:** Proposed MVP architecture
 **Last updated:** 2026-06-30
 
@@ -519,12 +519,14 @@ The Excel renderer uses the five required sheets, native tables and filters, fro
 
 Deliverables:
 
-- Add one CLI command that accepts a fixture or manual-profile JSON file.
-- Build the sample DuckDB database when needed.
+- Add one CLI command that accepts the included example or another manual-profile JSON file.
+- Use the full real local DuckDB database produced by the existing refresh command.
 - Generate a classified college list, gap analysis, PDF, and Excel workbook.
 - Document setup, demo usage, limitations, and expected output.
 
-Complete when a clean checkout can run the documented offline demo without paid services, private student data, or network access after dependencies are installed.
+Complete when a clean checkout can perform one explicit real-data refresh and then run the documented demo locally without cloud hosting, paid services, private student data, or further network access. A frozen public fixture remains available only as an explicit automated-test mode.
+
+The demo scans the local institution database, applies confirmed geographic preferences while retaining user-entered schools, classifies all matches, and returns up to ten schools per defensible category. It writes the canonical JSON report and matching PDF/XLSX files to a private local session directory. It never calls the networking layer; if the real database is absent, it instructs the user to run `refresh-data` rather than silently substituting test data.
 
 ### Stage 2 — Documents
 
