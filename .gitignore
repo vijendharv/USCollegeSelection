@@ -23,6 +23,7 @@ data/*.duckdb.*
 uploads/
 reports/
 sessions/
+demo-output/
 
 # Frontend artifacts
 node_modules/

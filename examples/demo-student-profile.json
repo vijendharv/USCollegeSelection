@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "00000000-0000-0000-0000-000000000017",
+  "high_school": {
+    "stage": "senior",
+    "graduation_year": 2027,
+    "academic_record_as_of": "2026-06-15"
+  },
+  "academic": {
+    "courses": [
+      {
+        "course_id": "00000000-0000-0000-0000-000000000101",
+        "subject": "Mathematics",
+        "name": "AP Calculus AB",
+        "grade_level": 11,
+        "term": "full_year",
+        "level": "ap",
+        "grade": {
+          "original": "A"
+        },
+        "status": "completed",
+        "source": "manual"
+      },
+      {
+        "course_id": "00000000-0000-0000-0000-000000000102",
+        "subject": "Computer Science",
+        "name": "AP Computer Science A",
+        "grade_level": 12,
+        "term": "full_year",
+        "level": "ap",
+        "status": "in_progress",
+        "source": "manual"
+      }
+    ],
+    "gpas": [
+      {
+        "value": "3.85",
+        "scale": "4.0",
+        "type": "unweighted",
+        "scope": "cumulative",
+        "source": "manual"
+      }
+    ],
+    "tests": [
+      {
+        "test": "sat",
+        "score": "1510",
+        "test_date": "2026-05-02"
+      }
+    ]
+  },
+  "preferences": {
+    "residence_state": "CA",
+    "intended_entry_year": 2027,
+    "intended_entry_term": "fall",
+    "intended_majors": [
+      "Computer Science"
+    ],
+    "annual_budget": "40000",
+    "budget_type": "published_cost",
+    "preferred_states": [
+      "CA",
+      "AZ",
+      "GA",
+      "MA",
+      "NC"
+    ],
+    "existing_schools": [
+      "Harvard University"
+    ],
+    "test_submission_plan": "submit"
+  }
+}
