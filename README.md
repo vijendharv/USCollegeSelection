@@ -47,6 +47,14 @@ USCS_LOG_LEVEL=DEBUG uv run python -m app health
 
 The command creates configured local data and session directories when needed and returns a JSON health response.
 
+### Refresh real College Scorecard data
+
+```bash
+uv run python -m app refresh-data
+```
+
+The command discovers the current official institution archive from the College Scorecard data page, downloads it under `data/raw/`, validates it, and atomically builds `data/college.duckdb`. Both the downloaded archive and generated database are local artifacts excluded from Git.
+
 ## Documentation
 
 - [Product specification](PRODUCT_SPEC.md)
