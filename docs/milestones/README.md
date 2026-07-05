@@ -26,5 +26,6 @@ Each completed milestone should document:
 | 1.9 Granular CIP program data | Complete | [1.9 Granular CIP program data](1.9-granular-cip-data.md) |
 | 1.10 National major fit rank and admissions benchmarks | Complete | [1.10 National major fit rank](1.10-national-major-fit-rank.md) |
 | 1.11 Résumé evidence review guardrail | Complete | [1.11 Résumé evidence review guardrail](1.11-resume-review-guardrail.md) |
+| 1.12 Adaptive category fit thresholds | Complete | [1.12 Adaptive category fit thresholds](1.12-adaptive-fit-thresholds.md) |
 
 Use [TEMPLATE.md](TEMPLATE.md) when completing the next milestone.

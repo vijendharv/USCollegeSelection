@@ -54,6 +54,7 @@ def render_excel(report: CollegeReport) -> bytes:
         _student_supplied_colleges_sheet(workbook, report)
     _college_list_sheet(workbook, report)
     _major_rankings_sheet(workbook, report)
+    _adaptive_thresholds_sheet(workbook, report)
     _gap_analysis_sheet(workbook, report)
     _student_profile_sheet(workbook, report)
     _application_tracker_sheet(workbook, report)
@@ -109,6 +110,16 @@ def render_pdf(report: CollegeReport) -> bytes:
             leading=10,
         )
     )
+    styles.add(
+        ParagraphStyle(
+            name="TableHeader",
+            parent=styles["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=7,
+            leading=8,
+            textColor=colors.white,
+        )
+    )
     story: list[Any] = [
         Paragraph("US College Selection Report", styles["ReportTitle"]),
         Paragraph(
@@ -122,6 +133,7 @@ def render_pdf(report: CollegeReport) -> bytes:
         Spacer(1, 12),
         Paragraph(_pdf_text(report.disclaimer), styles["Small"]),
     ]
+    story.extend(_pdf_thresholds(report, styles))
     story.extend(_pdf_student_supplied_colleges(report, styles))
     story.append(PageBreak())
     story.extend(_pdf_major_ranking_sections(report, styles))
@@ -268,6 +280,7 @@ def _student_supplied_colleges_sheet(workbook: Workbook, report: CollegeReport) 
         "Intended Major",
         "Classification",
         "Recommendation Rank Within Classification",
+        "Category Applied Fit Threshold",
         "National Program Strength Rank",
         "Program Strength Rank Population",
         "Program Strength Score",
@@ -307,6 +320,9 @@ def _student_supplied_colleges_sheet(workbook: Workbook, report: CollegeReport) 
                         else None
                     ),
                     ranking.rank if ranking else None,
+                    _threshold_for(report, major, school.classification.category)
+                    if school
+                    else None,
                     ranking.national_program_strength_rank if ranking else None,
                     ranking.national_program_strength_rank_total if ranking else None,
                     float(ranking.program_strength_score) if ranking else None,
@@ -322,7 +338,7 @@ def _student_supplied_colleges_sheet(workbook: Workbook, report: CollegeReport) 
     _classification_colors(sheet, f"D2:D{max(2, sheet.max_row)}", column="D")
     _set_widths(
         sheet,
-        [30, 30, 24, 18, 24, 28, 24, 22, 22, 26, 22, 12, 14, 34],
+        [30, 30, 24, 18, 24, 24, 28, 24, 22, 22, 26, 22, 12, 14, 34],
     )
 
 
@@ -333,6 +349,7 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "Institution",
         "Classification",
         "Recommendation Rank Within Classification",
+        "Applied Fit Threshold",
         "National Program Strength Rank",
         "Program Strength Rank Population",
         "Program Strength Score",
@@ -363,6 +380,7 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 _excel_text(item.institution_name),
                 item.category.value.replace("_", " ").title(),
                 item.rank,
+                item.applied_fit_threshold,
                 item.national_program_strength_rank,
                 item.national_program_strength_rank_total,
                 float(item.program_strength_score),
@@ -390,7 +408,7 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
             ]
         )
     _write_table_sheet(sheet, "MajorRankingsTable", headers, rows)
-    for column in (7, 11, 14, 18, 19, 20, 21, 22):
+    for column in (5, 8, 12, 15, 19, 20, 21, 22, 23):
         for cell in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for value in cell:
                 value.number_format = "0.0"
@@ -402,6 +420,7 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
             30,
             18,
             24,
+            20,
             28,
             24,
             22,
@@ -433,6 +452,7 @@ def _addendum_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "Institution",
         "Classification",
         "Recommendation Rank Within Classification",
+        "Applied Fit Threshold",
         "National Program Strength Rank",
         "Program Strength Rank Population",
         "Program Strength Score",
@@ -448,6 +468,7 @@ def _addendum_sheet(workbook: Workbook, report: CollegeReport) -> None:
             _excel_text(item.institution_name),
             item.category.value.replace("_", " ").title(),
             item.rank,
+            item.applied_fit_threshold,
             item.national_program_strength_rank,
             item.national_program_strength_rank_total,
             float(item.program_strength_score),
@@ -461,7 +482,59 @@ def _addendum_sheet(workbook: Workbook, report: CollegeReport) -> None:
     ]
     _write_table_sheet(sheet, "AdditionalQualifiedCollegesTable", headers, rows)
     _classification_colors(sheet, f"C2:C{max(2, sheet.max_row)}", column="C")
-    _set_widths(sheet, [24, 32, 18, 30, 28, 24, 22, 22, 26, 22, 12, 14])
+    _set_widths(sheet, [24, 32, 18, 30, 20, 28, 24, 22, 22, 26, 22, 12, 14])
+
+
+def _adaptive_thresholds_sheet(workbook: Workbook, report: CollegeReport) -> None:
+    sheet = workbook.create_sheet("Adaptive Thresholds")
+    headers = [
+        "Intended Major",
+        "Classification",
+        "Mode",
+        "Initial Threshold",
+        "Applied Threshold",
+        "Configured Floor",
+        "Minimum Requested",
+        "Exact Program Candidates",
+        "Qualified Candidates",
+        "Selected Candidates",
+        "Addendum Candidates",
+    ]
+    rows = [
+        [
+            _excel_text(item.intended_major),
+            item.category.value.replace("_", " ").title(),
+            item.threshold_mode.value.title(),
+            float(item.initial_threshold),
+            float(item.applied_threshold),
+            float(item.adaptive_floor),
+            item.minimum_requested,
+            item.exact_program_candidates,
+            item.qualified_candidates,
+            item.selected_candidates,
+            item.addendum_candidates,
+        ]
+        for item in report.category_thresholds
+    ]
+    _write_table_sheet(sheet, "AdaptiveThresholdsTable", headers, rows)
+    _classification_colors(sheet, f"B2:B{max(2, sheet.max_row)}", column="B")
+    _set_widths(sheet, [24, 18, 14, 18, 18, 18, 20, 24, 22, 20, 20])
+
+
+def _threshold_for(
+    report: CollegeReport,
+    major: str,
+    category: Any,
+) -> float | None:
+    result = next(
+        (
+            item
+            for item in report.category_thresholds
+            if item.intended_major == major and item.category == category
+        ),
+        None,
+    )
+    return float(result.applied_threshold) if result else None
 
 
 def _gap_analysis_sheet(workbook: Workbook, report: CollegeReport) -> None:
@@ -540,6 +613,30 @@ def _student_profile_sheet(workbook: Workbook, report: CollegeReport) -> None:
             "Holistic context",
             "Résumé evidence review status",
             report.student_profile.holistic.review_status.value.replace("_", " ").title(),
+            "Confirmed profile",
+        ],
+        [
+            "Recommendation settings",
+            "Threshold mode",
+            report.student_profile.preferences.recommendation_settings.threshold_mode.value.title(),
+            "Confirmed profile",
+        ],
+        [
+            "Recommendation settings",
+            "Initial fit threshold",
+            report.student_profile.preferences.recommendation_settings.initial_fit_threshold,
+            "Confirmed profile",
+        ],
+        [
+            "Recommendation settings",
+            "Adaptive floor",
+            report.student_profile.preferences.recommendation_settings.adaptive_floor,
+            "Confirmed profile",
+        ],
+        [
+            "Recommendation settings",
+            "Minimum results per category",
+            report.student_profile.preferences.recommendation_settings.minimum_results_per_category,
             "Confirmed profile",
         ],
     ]
@@ -786,6 +883,57 @@ def _pdf_summary(report: CollegeReport, styles: Any) -> PDFTable:
     return table
 
 
+def _pdf_thresholds(report: CollegeReport, styles: Any) -> list[Any]:
+    if not report.category_thresholds:
+        return []
+    data: list[list[Any]] = [["Major", "Category", "Initial", "Applied", "Floor", "Qualified"]]
+    for item in report.category_thresholds:
+        data.append(
+            [
+                Paragraph(_pdf_text(item.intended_major), styles["Small"]),
+                item.category.value.replace("_", " ").title(),
+                str(item.initial_threshold),
+                str(item.applied_threshold),
+                str(item.adaptive_floor),
+                item.qualified_candidates,
+            ]
+        )
+    table = PDFTable(
+        data,
+        colWidths=[1.7 * inch, 1.25 * inch, 0.75 * inch, 0.75 * inch, 0.7 * inch, 0.85 * inch],
+        repeatRows=1,
+    )
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(f"#{_NAVY}")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("ALIGN", (2, 1), (-1, -1), "CENTER"),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.white, colors.HexColor(f"#{_LIGHT}")],
+                ),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D9E1F2")),
+            ]
+        )
+    )
+    return [
+        Spacer(1, 12),
+        Paragraph("Adaptive fit thresholds", styles["SchoolTitle"]),
+        Paragraph(
+            "Each category starts at the configured initial threshold and lowers independently "
+            "until it reaches the requested option count or configured floor.",
+            styles["Small"],
+        ),
+        Spacer(1, 6),
+        table,
+    ]
+
+
 def _pdf_student_supplied_colleges(report: CollegeReport, styles: Any) -> list[Any]:
     supplied = report.student_profile.preferences.existing_schools
     if not supplied:
@@ -801,12 +949,16 @@ def _pdf_student_supplied_colleges(report: CollegeReport, styles: Any) -> list[A
     }
     data: list[list[Any]] = [
         [
-            "Student-supplied college",
-            "Major",
-            "Category",
-            "Category rank",
-            "Program rank",
-            "Fit rank",
+            Paragraph(label, styles["TableHeader"])
+            for label in (
+                "Student-supplied college",
+                "Major",
+                "Category",
+                "Category rank",
+                "Threshold",
+                "Program rank",
+                "Fit rank",
+            )
         ]
     ]
     for supplied_name in supplied:
@@ -827,6 +979,9 @@ def _pdf_student_supplied_colleges(report: CollegeReport, styles: Any) -> list[A
                         else "Not found"
                     ),
                     ranking.rank if ranking else "-",
+                    _threshold_for(report, major, school.classification.category)
+                    if school
+                    else "-",
                     (
                         f"{ranking.national_program_strength_rank} of "
                         f"{ranking.national_program_strength_rank_total}"
@@ -842,7 +997,15 @@ def _pdf_student_supplied_colleges(report: CollegeReport, styles: Any) -> list[A
             )
     table = PDFTable(
         data,
-        colWidths=[1.9 * inch, 1.25 * inch, 1.05 * inch, 0.7 * inch, 0.95 * inch, 0.95 * inch],
+        colWidths=[
+            1.65 * inch,
+            1.1 * inch,
+            0.95 * inch,
+            0.6 * inch,
+            0.65 * inch,
+            0.9 * inch,
+            0.9 * inch,
+        ],
         repeatRows=1,
     )
     table.setStyle(
@@ -881,10 +1044,10 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
     content: list[Any] = [Paragraph("Fit rankings by intended major", styles["SchoolTitle"])]
     content.append(
         Paragraph(
-            "Main recommendations meet the 80-point fit floor, then prioritize national program "
-            "strength before student fit within each admissions category. Program strength uses "
-            "free IPEDS/Scorecard program and outcome evidence; it is not a commercial prestige "
-            "ranking. Remaining qualified colleges appear in the addendum.",
+            "Each category applies its reported fit threshold, then prioritizes national program "
+            "strength before student fit. Program strength uses free IPEDS/Scorecard program "
+            "and outcome evidence; it is not a commercial prestige ranking. Remaining qualified "
+            "colleges appear in the addendum.",
             styles["Small"],
         )
     )
@@ -896,14 +1059,18 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
         content.append(Paragraph(_pdf_text(major), styles["SchoolTitle"]))
         data: list[list[Any]] = [
             [
-                "Strength rank",
-                "Fit rank",
-                "Category rank",
-                "Institution",
-                "Category",
-                "Fit",
-                "Offered",
-                "Confidence",
+                Paragraph(label, styles["TableHeader"])
+                for label in (
+                    "Strength rank",
+                    "Fit rank",
+                    "Category rank",
+                    "Fit threshold",
+                    "Institution",
+                    "Category",
+                    "Fit",
+                    "Offered",
+                    "Confidence",
+                )
             ]
         ]
         for item in (value for value in report.major_rankings if value.intended_major == major):
@@ -921,6 +1088,11 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
                         else "Not ranked"
                     ),
                     item.rank,
+                    (
+                        str(item.applied_fit_threshold)
+                        if item.applied_fit_threshold is not None
+                        else "-"
+                    ),
                     Paragraph(_pdf_text(item.institution_name), styles["Small"]),
                     item.category.value.replace("_", " ").title(),
                     str(item.overall_score),
@@ -938,11 +1110,12 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
                 0.8 * inch,
                 0.8 * inch,
                 0.65 * inch,
-                1.8 * inch,
-                1.05 * inch,
+                0.65 * inch,
+                1.45 * inch,
+                0.9 * inch,
                 0.5 * inch,
                 0.65 * inch,
-                0.65 * inch,
+                0.75 * inch,
             ],
             repeatRows=1,
         )
@@ -972,7 +1145,15 @@ def _pdf_addendum(report: CollegeReport, styles: Any) -> list[Any]:
     if not report.addendum_rankings:
         return []
     data: list[list[Any]] = [
-        ["Strength rank", "Institution", "Major", "Category", "Category rank", "Fit"]
+        [
+            "Strength rank",
+            "Institution",
+            "Major",
+            "Category",
+            "Category rank",
+            "Threshold",
+            "Fit",
+        ]
     ]
     for item in report.addendum_rankings:
         data.append(
@@ -987,12 +1168,25 @@ def _pdf_addendum(report: CollegeReport, styles: Any) -> list[Any]:
                 Paragraph(_pdf_text(item.intended_major), styles["Small"]),
                 item.category.value.replace("_", " ").title(),
                 item.rank,
+                (
+                    str(item.applied_fit_threshold)
+                    if item.applied_fit_threshold is not None
+                    else "-"
+                ),
                 str(item.overall_score),
             ]
         )
     table = PDFTable(
         data,
-        colWidths=[0.9 * inch, 2.05 * inch, 1.35 * inch, 1.1 * inch, 0.8 * inch, 0.55 * inch],
+        colWidths=[
+            0.85 * inch,
+            1.8 * inch,
+            1.2 * inch,
+            1.0 * inch,
+            0.7 * inch,
+            0.65 * inch,
+            0.5 * inch,
+        ],
         repeatRows=1,
     )
     table.setStyle(

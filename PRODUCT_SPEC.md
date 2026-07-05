@@ -245,14 +245,15 @@ Hard filters and soft preferences must be visibly different. The app must ask fo
 2. Safety / Likely, Target, Reach, or Insufficient Data.
 3. Classification confidence.
 4. Recommendation rank within the admissions category after the fit floor and program-strength ordering.
-5. City and state.
-6. Intended-major availability.
-7. Overall acceptance rate.
-8. National student-major fit position and comparison population.
-9. National program-strength rank, score, confidence, and comparison population.
-10. Published GPA and test-score profile, clearly labeling unavailable benchmarks.
-11. Tuition, total cost of attendance, and net price.
-12. Application deadlines.
+5. Applied student-fit threshold for that major and admissions category.
+6. City and state.
+7. Intended-major availability.
+8. Overall acceptance rate.
+9. National student-major fit position and comparison population.
+10. National program-strength rank, score, confidence, and comparison population.
+11. Published GPA and test-score profile, clearly labeling unavailable benchmarks.
+12. Tuition, total cost of attendance, and net price.
+13. Application deadlines.
 
 ### 10.2 Optional columns
 
@@ -403,7 +404,8 @@ The app must generate a formatted `.xlsx` workbook containing:
 5. **Student Profile** — confirmed manual inputs, transcript-derived academic summary, and résumé-derived activity summary.
 6. **Application Tracker** — school, plan, deadline, status, fee, supplements, and notes.
 7. **Sources & Methodology** — source URLs, data years, verification dates, classification rules, and methodology version.
-8. **Additional Qualified Colleges** — exact-program matches scoring at least 80 that were not among the ten strongest programs selected for their category.
+8. **Adaptive Thresholds** — the initial, floor, and applied threshold plus candidate counts for every major and admissions category.
+9. **Additional Qualified Colleges** — exact-program matches meeting the category's applied threshold that were not among the strongest programs selected for its main table.
 
 Workbook requirements:
 

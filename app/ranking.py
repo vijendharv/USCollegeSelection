@@ -21,7 +21,6 @@ from app.models import (
 )
 
 FIT_METHODOLOGY_VERSION = "1.3"
-BEST_FIT_THRESHOLD = Decimal(80)
 
 _WEIGHTS = {
     "Academic fit": Decimal("30"),
@@ -110,7 +109,6 @@ def rank_major_fits(
             key=lambda item: (
                 item.program_offered is not True,
                 item.program_offered is False,
-                item.overall_score < BEST_FIT_THRESHOLD,
                 item.national_program_strength_rank is None,
                 item.national_program_strength_rank or 10_000,
                 _confidence_order(item.program_strength_confidence),
