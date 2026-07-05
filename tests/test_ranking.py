@@ -4,6 +4,7 @@ from app.models import (
     AcademicStanding,
     AdmissionCategory,
     HolisticProfile,
+    HolisticReviewStatus,
     ProgramOffering,
     SchoolReport,
     StudentPreferences,
@@ -134,6 +135,26 @@ def test_resume_context_does_not_change_admissions_categories() -> None:
         AdmissionCategory.TARGET,
         AdmissionCategory.TARGET,
     ]
+
+
+def test_resume_evidence_needing_review_is_not_scored() -> None:
+    pending = _profile().model_copy(
+        update={
+            "holistic": HolisticProfile(
+                review_status=HolisticReviewStatus.NEEDS_REVIEW,
+                themes=["healthcare", "research"],
+            )
+        }
+    )
+    empty = _profile().model_copy(update={"holistic": HolisticProfile()})
+
+    pending_ranked, _ = rank_major_fits(pending, _schools(), _offerings())
+    empty_ranked, _ = rank_major_fits(empty, _schools(), _offerings())
+
+    assert [item.overall_score for item in pending_ranked] == [
+        item.overall_score for item in empty_ranked
+    ]
+    assert all("confirmed résumé/activity review" in item.missing_inputs for item in pending_ranked)
 
 
 def test_six_digit_availability_and_four_digit_outcomes_are_combined() -> None:

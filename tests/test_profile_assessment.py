@@ -13,6 +13,8 @@ from app.models import (
     GPAType,
     Grade,
     HighSchoolContext,
+    HolisticProfile,
+    HolisticReviewStatus,
     StudentPreferences,
     StudentProfile,
     WarningSeverity,
@@ -62,6 +64,36 @@ def test_complete_profile_is_ready_without_inventing_optional_values() -> None:
     assert assessment.warnings == []
     assert serialized["academic"]["gpas"] == []
     assert serialized["academic"]["tests"] == []
+
+
+def test_unconfirmed_resume_evidence_is_explicitly_flagged_for_review() -> None:
+    profile = StudentProfile(
+        high_school=complete_high_school(),
+        academic=AcademicRecord(
+            courses=[
+                Course(
+                    subject="Mathematics",
+                    name="AP Calculus AB",
+                    level=CourseLevel.AP,
+                    grade=Grade(original="A"),
+                )
+            ]
+        ),
+        holistic=HolisticProfile(
+            review_status=HolisticReviewStatus.NEEDS_REVIEW,
+            themes=["research"],
+        ),
+        preferences=complete_preferences(),
+    )
+
+    assessment = assess_profile(profile)
+    warning = next(
+        item for item in assessment.warnings if item.code == "holistic_confirmation_required"
+    )
+
+    assert assessment.ready_for_analysis is True
+    assert warning.path == "holistic.review_status"
+    assert warning.severity is WarningSeverity.WARNING
 
 
 def test_empty_partial_profile_returns_blocking_warnings() -> None:

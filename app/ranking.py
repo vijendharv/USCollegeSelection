@@ -13,6 +13,7 @@ from app.models import (
     ConsolidatedFitResult,
     FitComponent,
     FitConfidence,
+    HolisticReviewStatus,
     MajorFitResult,
     ProgramOffering,
     SchoolReport,
@@ -448,6 +449,8 @@ def _holistic_component(
     major: str,
     major_evidence: _MajorEvidence,
 ) -> FitComponent:
+    if student.holistic.review_status is not HolisticReviewStatus.CONFIRMED:
+        return _missing("Holistic alignment", "confirmed résumé/activity review")
     themes = {theme.casefold() for theme in student.holistic.themes}
     for activity in student.holistic.activities:
         themes.update(theme.casefold() for theme in activity.themes)

@@ -197,6 +197,9 @@ The app may organize activities into themes related to intended majors and stude
 - Never invent impact metrics, hours, awards, selectivity, or leadership scope.
 - Treat résumé formatting quality as irrelevant to admissions classification.
 - Allow users without a résumé to enter activities manually or skip this section.
+- Parse résumé evidence into structured activities and themes with a `needs_review` status; never leave uploaded résumé evidence only in free-form notes.
+- Require user confirmation before changing résumé review status to `confirmed` and before résumé evidence can affect holistic alignment.
+- Show an explicit profile warning when résumé-derived evidence is pending review; unconfirmed evidence must be exported for review but excluded from scoring.
 
 ### 8.4 Use in recommendations
 

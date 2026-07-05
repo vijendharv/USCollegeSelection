@@ -581,6 +581,7 @@ Complete when national program-strength and student-fit ranks are deterministic 
 - Add text-based and scanned PDF extraction.
 - Add image normalization and Tesseract OCR.
 - Add transcript and résumé confirmation UI.
+- Store parsed résumé activities and themes as `needs_review`; ranking consumes only `confirmed` holistic evidence and profile assessment warns when review is pending.
 - Add privacy cleanup and file limits.
 
 ### Stage 3 — ChatGPT app
