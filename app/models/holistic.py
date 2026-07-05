@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from enum import StrEnum
 
 from pydantic import Field
 
@@ -22,8 +23,16 @@ class Activity(DomainModel):
     themes: list[str] = Field(default_factory=list)
 
 
+class HolisticReviewStatus(StrEnum):
+    """Whether structured résumé evidence is eligible for scoring."""
+
+    NEEDS_REVIEW = "needs_review"
+    CONFIRMED = "confirmed"
+
+
 class HolisticProfile(DomainModel):
     """Reviewable themes and facts confirmed from a résumé or manual entry."""
 
+    review_status: HolisticReviewStatus = HolisticReviewStatus.CONFIRMED
     themes: list[str] = Field(default_factory=list)
     activities: list[Activity] = Field(default_factory=list)

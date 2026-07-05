@@ -39,7 +39,7 @@ from app.models.college import (
     RefreshReport,
 )
 from app.models.export import ExportedFile, ExportFormat, ExportResult
-from app.models.holistic import Activity, HolisticProfile
+from app.models.holistic import Activity, HolisticProfile, HolisticReviewStatus
 from app.models.preferences import (
     BudgetType,
     EntryTerm,
@@ -96,6 +96,7 @@ __all__ = [
     "HighSchoolContext",
     "HolisticContext",
     "HolisticProfile",
+    "HolisticReviewStatus",
     "Institution",
     "InstitutionFilters",
     "MajorFitResult",

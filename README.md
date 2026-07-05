@@ -121,4 +121,5 @@ uv run python -m app demo \
 
 - [Product specification](PRODUCT_SPEC.md)
 - [Architecture](ARCHITECTURE.md)
+- [Student-major fit scoring methodology](docs/FIT_SCORING_METHODOLOGY.md)
 - [Milestone implementation records](docs/milestones/README.md)

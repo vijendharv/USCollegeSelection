@@ -9,6 +9,7 @@ from pydantic import Field
 from app.models.academic import CourseLevel, CourseStatus, GPAType
 from app.models.applicant import ApplicantStage
 from app.models.base import DomainModel
+from app.models.holistic import HolisticReviewStatus
 from app.models.student import StudentProfile
 
 
@@ -36,6 +37,19 @@ def assess_profile(profile: StudentProfile) -> ProfileAssessment:
     academic = profile.academic
     high_school = profile.high_school
     preferences = profile.preferences
+
+    if profile.holistic.review_status is HolisticReviewStatus.NEEDS_REVIEW:
+        warnings.append(
+            _warning(
+                "holistic_confirmation_required",
+                (
+                    "Résumé-derived activities and themes require review and confirmation "
+                    "before they can affect fit ranking."
+                ),
+                "holistic.review_status",
+                WarningSeverity.WARNING,
+            )
+        )
 
     has_course_grade = any(
         course.grade is not None

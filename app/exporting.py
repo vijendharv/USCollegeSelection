@@ -536,6 +536,12 @@ def _student_profile_sheet(workbook: Workbook, report: CollegeReport) -> None:
             report.student_profile.preferences.annual_budget,
             "Confirmed profile",
         ],
+        [
+            "Holistic context",
+            "Résumé evidence review status",
+            report.student_profile.holistic.review_status.value.replace("_", " ").title(),
+            "Confirmed profile",
+        ],
     ]
     for gpa in report.student_profile.academic.gpas:
         rows.append(
