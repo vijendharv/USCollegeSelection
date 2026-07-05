@@ -43,10 +43,13 @@ from app.models.holistic import Activity, HolisticProfile, HolisticReviewStatus
 from app.models.preferences import (
     BudgetType,
     EntryTerm,
+    RecommendationSettings,
     StudentPreferences,
     TestSubmissionPlan,
+    ThresholdMode,
 )
 from app.models.ranking import (
+    CategoryThresholdResult,
     ConsolidatedFitResult,
     FitComponent,
     FitConfidence,
@@ -71,6 +74,7 @@ __all__ = [
     "AdmissionsBenchmark",
     "ApplicantStage",
     "BudgetType",
+    "CategoryThresholdResult",
     "ClassificationConfidence",
     "ClassificationResult",
     "ClassificationRule",
@@ -104,6 +108,7 @@ __all__ = [
     "ProfileAssessment",
     "ProfileWarning",
     "ProgramOffering",
+    "RecommendationSettings",
     "RecordSource",
     "RefreshReport",
     "ReportCandidate",
@@ -115,6 +120,7 @@ __all__ = [
     "Term",
     "TestScore",
     "TestSubmissionPlan",
+    "ThresholdMode",
     "WarningSeverity",
     "assess_profile",
 ]

@@ -86,6 +86,31 @@ class TestSubmissionPlan(StrEnum):
     UNDECIDED = "undecided"
 
 
+class ThresholdMode(StrEnum):
+    FIXED = "fixed"
+    ADAPTIVE = "adaptive"
+
+
+class RecommendationSettings(DomainModel):
+    """Per-student controls for the recommendation qualification pool."""
+
+    threshold_mode: ThresholdMode = ThresholdMode.ADAPTIVE
+    initial_fit_threshold: Decimal = Field(default=Decimal(80), ge=0, le=100)
+    adaptive_floor: Decimal = Field(default=Decimal(70), ge=0, le=100)
+    minimum_results_per_category: int = Field(default=5, ge=1, le=10)
+    maximum_results_per_category: int = Field(default=10, ge=1, le=10)
+
+    @model_validator(mode="after")
+    def validate_thresholds_and_counts(self) -> RecommendationSettings:
+        if self.adaptive_floor > self.initial_fit_threshold:
+            raise ValueError("adaptive_floor cannot exceed initial_fit_threshold")
+        if self.minimum_results_per_category > self.maximum_results_per_category:
+            raise ValueError(
+                "minimum_results_per_category cannot exceed maximum_results_per_category"
+            )
+        return self
+
+
 class StudentPreferences(DomainModel):
     """Preferences are partial while the user builds the profile."""
 
@@ -99,6 +124,7 @@ class StudentPreferences(DomainModel):
     excluded_states: list[str] = Field(default_factory=list)
     existing_schools: list[PreferenceText] = Field(default_factory=list)
     test_submission_plan: TestSubmissionPlan = TestSubmissionPlan.UNDECIDED
+    recommendation_settings: RecommendationSettings = Field(default_factory=RecommendationSettings)
 
     @field_validator("residence_state")
     @classmethod

@@ -19,6 +19,7 @@ def test_excel_has_required_sheets_tables_and_frozen_headers() -> None:
         "Student-Supplied Colleges",
         "College List",
         "Major Rankings",
+        "Adaptive Thresholds",
         "Gap Analysis",
         "Student Profile",
         "Application Tracker",
@@ -58,7 +59,7 @@ def test_student_supplied_colleges_are_separated_at_top() -> None:
 
     assert workbook.sheetnames[0] == "Student-Supplied Colleges"
     assert sheet["A2"].value == report.student_profile.preferences.existing_schools[0]
-    assert sheet["N2"].value == "Matched"
+    assert sheet["O2"].value == "Matched"
 
 
 def test_excel_escapes_formula_injection_text() -> None:

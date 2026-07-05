@@ -88,6 +88,13 @@
     "existing_schools": [
       "Harvard University"
     ],
-    "test_submission_plan": "submit"
+    "test_submission_plan": "submit",
+    "recommendation_settings": {
+      "threshold_mode": "adaptive",
+      "initial_fit_threshold": "80",
+      "adaptive_floor": "70",
+      "minimum_results_per_category": 5,
+      "maximum_results_per_category": 10
+    }
   }
 }

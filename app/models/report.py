@@ -12,7 +12,7 @@ from pydantic import Field
 from app.models.base import DomainModel
 from app.models.classification import AdmissionsBenchmark, ClassificationResult
 from app.models.college import DatasetVersion, Institution
-from app.models.ranking import ConsolidatedFitResult, MajorFitResult
+from app.models.ranking import CategoryThresholdResult, ConsolidatedFitResult, MajorFitResult
 from app.models.student import StudentProfile
 
 
@@ -79,6 +79,7 @@ class CollegeReport(DomainModel):
     student_supplied_rankings: list[MajorFitResult] = Field(default_factory=list)
     major_rankings: list[MajorFitResult] = Field(default_factory=list)
     addendum_rankings: list[MajorFitResult] = Field(default_factory=list)
+    category_thresholds: list[CategoryThresholdResult] = Field(default_factory=list)
     consolidated_rankings: list[ConsolidatedFitResult] = Field(default_factory=list)
     fit_methodology_version: str | None = None
     holistic_context: HolisticContext = Field(default_factory=HolisticContext)

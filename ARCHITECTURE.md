@@ -576,6 +576,18 @@ Deliverables:
 
 Complete when national program-strength and student-fit ranks are deterministic across the full eligible institution universe, category ranks remain separate, the 80-point qualification floor is enforced without padding, supplied colleges are preserved, and JSON/PDF/XLSX include the qualified-college addendum and communicate source limitations consistently.
 
+#### Milestone 1.12 — Adaptive category fit thresholds
+
+Deliverables:
+
+- Add per-student recommendation settings to JSON with adaptive and fixed modes.
+- Default each intended-major and admissions-category group to 80, lowering only that group one point at a time until five exact-program options qualify or the 70 floor is reached.
+- Preserve program-strength-first ordering and the ten-school main-table cap.
+- Record the applied threshold and candidate counts for every group in canonical JSON.
+- Display the applied threshold in PDF and Excel recommendation tables and add a dedicated Excel threshold audit sheet.
+
+Complete when thresholds adapt independently, no group crosses its configured floor, fixed mode remains available, sparse groups are not padded, and automated plus generated-artifact checks verify threshold visibility.
+
 ### Stage 2 — Documents
 
 - Add text-based and scanned PDF extraction.

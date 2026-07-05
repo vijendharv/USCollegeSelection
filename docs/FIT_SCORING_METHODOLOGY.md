@@ -225,11 +225,19 @@ Every ordinal is accompanied by its comparison population, for example `25 of 60
 
 The current qualified-pool rules are:
 
-- overall student-major fit must be at least 80/100;
 - exact six-digit program availability must be confirmed; and
 - student-supplied colleges are retained separately regardless of these recommendation gates.
 
-Within every intended-major and admissions-category group, qualified colleges are ordered by national program-strength rank before student fit. Up to the requested category cap, normally ten, appear in the main recommendations. Remaining qualified colleges appear in the JSON, PDF, and Excel addendum.
+Qualification is adaptive and independent for every intended-major and admissions-category group. The default process is:
+
+1. Start at a fit threshold of 80/100.
+2. If fewer than five exact-program candidates qualify, lower only that group's threshold by one point.
+3. Stop as soon as five candidates qualify or the threshold reaches the 70/100 floor.
+4. Never lower a group that already has enough options.
+
+The student JSON can set `threshold_mode` to `fixed` or `adaptive` and configure `initial_fit_threshold`, `adaptive_floor`, `minimum_results_per_category`, and `maximum_results_per_category` under `preferences.recommendation_settings`. The applied threshold and candidate counts are stored for every group and displayed in JSON, PDF, and Excel. A group may still return fewer than the requested minimum when fewer exact-program candidates meet its configured floor.
+
+Within every intended-major and admissions-category group, qualified colleges are ordered by national program-strength rank before student fit. Up to the configured category cap, normally ten, appear in the main recommendations. Remaining qualified colleges appear in the JSON, PDF, and Excel addendum.
 
 Categories are never padded with colleges that fail the qualification rules.
 

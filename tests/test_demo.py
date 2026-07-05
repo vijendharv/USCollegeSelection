@@ -44,6 +44,19 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
     assert report["fit_methodology_version"] == "1.3"
     assert report["major_rankings"]
     assert report["student_supplied_rankings"]
+    assert report["category_thresholds"]
+    assert all(
+        70 <= float(item["applied_threshold"]) <= 80 for item in report["category_thresholds"]
+    )
+    threshold_by_category = {
+        (item["intended_major"], item["category"]): float(item["applied_threshold"])
+        for item in report["category_thresholds"]
+    }
+    assert all(
+        float(item["applied_fit_threshold"])
+        == threshold_by_category[(item["intended_major"], item["category"])]
+        for item in report["major_rankings"] + report["addendum_rankings"]
+    )
     assert {item["institution_name"] for item in report["student_supplied_rankings"]} == {
         "Harvard University"
     }
@@ -59,6 +72,7 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
         != "Arizona State University Campus Immersion"
     )
     assert "Major Rankings" in workbook.sheetnames
+    assert "Adaptive Thresholds" in workbook.sheetnames
     major_headers = [cell.value for cell in workbook["Major Rankings"][1]]
     assert "National Student-Major Fit Rank" in major_headers
     college_headers = [cell.value for cell in workbook["College List"][1]]
@@ -102,8 +116,10 @@ def test_demo_selects_top_qualified_program_and_exports_remainder(tmp_path: Path
     pdf_text = "\n".join(page.extract_text() or "" for page in pdf.pages)
 
     assert report["addendum_rankings"]
-    assert all(float(item["overall_score"]) >= 80 for item in report["major_rankings"])
-    assert all(float(item["overall_score"]) >= 80 for item in report["addendum_rankings"])
+    assert all(
+        float(item["overall_score"]) >= float(item["applied_fit_threshold"])
+        for item in report["major_rankings"] + report["addendum_rankings"]
+    )
     assert workbook.sheetnames[-1] == "Additional Qualified Colleges"
     assert "Addendum: additional qualified colleges" in pdf_text
 

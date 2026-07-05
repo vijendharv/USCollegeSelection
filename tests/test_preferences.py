@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from app.models import BudgetType, StudentPreferences
+from app.models import BudgetType, RecommendationSettings, StudentPreferences, ThresholdMode
 
 
 def test_preferences_normalize_states_and_remove_duplicates() -> None:
@@ -37,3 +37,30 @@ def test_state_cannot_be_preferred_and_excluded() -> None:
 def test_no_more_than_three_intended_majors_are_accepted() -> None:
     with pytest.raises(ValueError, match="at most 3 items"):
         StudentPreferences(intended_majors=["Biology", "Chemistry", "Physics", "Mathematics"])
+
+
+def test_recommendation_settings_default_to_adaptive_80_to_70() -> None:
+    settings = StudentPreferences().recommendation_settings
+
+    assert settings.threshold_mode is ThresholdMode.ADAPTIVE
+    assert settings.initial_fit_threshold == 80
+    assert settings.adaptive_floor == 70
+    assert settings.minimum_results_per_category == 5
+    assert settings.maximum_results_per_category == 10
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"initial_fit_threshold": 70, "adaptive_floor": 80}, "adaptive_floor"),
+        (
+            {"minimum_results_per_category": 8, "maximum_results_per_category": 5},
+            "minimum_results_per_category",
+        ),
+    ],
+)
+def test_recommendation_settings_reject_invalid_ranges(
+    overrides: dict[str, int], message: str
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        RecommendationSettings(**overrides)

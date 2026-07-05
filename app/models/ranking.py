@@ -9,6 +9,7 @@ from pydantic import Field
 
 from app.models.base import DomainModel
 from app.models.classification import AdmissionCategory
+from app.models.preferences import ThresholdMode
 
 
 class FitConfidence(StrEnum):
@@ -35,6 +36,7 @@ class MajorFitResult(DomainModel):
     national_rank_total: int = Field(default=0, ge=0)
     national_program_strength_rank: int | None = Field(default=None, ge=1)
     national_program_strength_rank_total: int = Field(default=0, ge=0)
+    applied_fit_threshold: Decimal | None = Field(default=None, ge=0, le=100)
     overall_score: Decimal = Field(ge=0, le=100)
     confidence: FitConfidence
     program_strength_score: Decimal = Field(ge=0, le=100)
@@ -48,6 +50,20 @@ class MajorFitResult(DomainModel):
     components: list[FitComponent]
     missing_inputs: list[str] = Field(default_factory=list)
     explanation: str
+
+
+class CategoryThresholdResult(DomainModel):
+    intended_major: str
+    category: AdmissionCategory
+    threshold_mode: ThresholdMode
+    initial_threshold: Decimal = Field(ge=0, le=100)
+    applied_threshold: Decimal = Field(ge=0, le=100)
+    adaptive_floor: Decimal = Field(ge=0, le=100)
+    minimum_requested: int = Field(ge=1)
+    exact_program_candidates: int = Field(ge=0)
+    qualified_candidates: int = Field(ge=0)
+    selected_candidates: int = Field(ge=0)
+    addendum_candidates: int = Field(ge=0)
 
 
 class ConsolidatedFitResult(DomainModel):
