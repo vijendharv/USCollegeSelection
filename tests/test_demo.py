@@ -50,6 +50,10 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
     assert "Harvard University" not in {
         item["institution_name"] for item in report["major_rankings"]
     }
+    category_ranks: dict[str, list[int]] = {}
+    for item in report["major_rankings"]:
+        category_ranks.setdefault(item["category"], []).append(item["rank"])
+    assert all(ranks == sorted(ranks) for ranks in category_ranks.values())
     assert (
         report["major_rankings"][0]["institution_name"]
         != "Arizona State University Campus Immersion"
