@@ -241,13 +241,14 @@ Hard filters and soft preferences must be visibly different. The app must ask fo
 1. Institution.
 2. Safety / Likely, Target, Reach, or Insufficient Data.
 3. Classification confidence.
-4. Overall fit rank.
+4. Student-major fit rank within the admissions category.
 5. City and state.
 6. Intended-major availability.
 7. Overall acceptance rate.
-8. Published GPA and test-score profile.
-9. Tuition, total cost of attendance, and net price.
-10. Application deadlines.
+8. National student-major fit position and comparison population.
+9. Published GPA and test-score profile, clearly labeling unavailable benchmarks.
+10. Tuition, total cost of attendance, and net price.
+11. Application deadlines.
 
 ### 10.2 Optional columns
 
@@ -391,11 +392,13 @@ The PDF must:
 
 The app must generate a formatted `.xlsx` workbook containing:
 
-1. **College List** — all selected and user-entered schools, classification, confidence, fit rank, admissions, cost, outcomes, deadlines, and links.
-2. **Gap Analysis** — student-versus-school measures, gaps, statuses, and sources.
-3. **Student Profile** — confirmed manual inputs, transcript-derived academic summary, and résumé-derived activity summary.
-4. **Application Tracker** — school, plan, deadline, status, fee, supplements, and notes.
-5. **Sources & Methodology** — source URLs, data years, verification dates, classification rules, and methodology version.
+1. **Student-Supplied Colleges** — user-entered schools ranked separately by major and category, including unresolved names.
+2. **College List** — all selected and user-entered schools, classification, confidence, fit rank, admissions, cost, outcomes, deadlines, and links.
+3. **Major Rankings** — national student-major fit position, national comparison population, within-category rank, component scores, and confidence.
+4. **Gap Analysis** — student-versus-school measures, gaps, statuses, and sources.
+5. **Student Profile** — confirmed manual inputs, transcript-derived academic summary, and résumé-derived activity summary.
+6. **Application Tracker** — school, plan, deadline, status, fee, supplements, and notes.
+7. **Sources & Methodology** — source URLs, data years, verification dates, classification rules, and methodology version.
 
 Workbook requirements:
 
@@ -480,7 +483,7 @@ The MVP is complete when:
 10. Deadlines link to an official institutional source.
 11. The gap analysis covers every selected and user-entered school.
 12. PDF output prints without clipped tables or missing content.
-13. Excel output contains all five required sheets and matches the UI and PDF.
+13. Excel output contains all seven required sheets and matches the UI and PDF.
 14. Re-running against the same data and methodology produces the same classifications.
 15. The product never describes admission or affordability as guaranteed.
 16. Résumé evidence is shown as holistic context and cannot silently override the deterministic academic/selectivity classification.

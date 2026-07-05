@@ -31,6 +31,8 @@ class MajorFitResult(DomainModel):
     intended_major: str
     category: AdmissionCategory
     rank: int = Field(ge=1)
+    national_rank: int | None = Field(default=None, ge=1)
+    national_rank_total: int = Field(default=0, ge=0)
     overall_score: Decimal = Field(ge=0, le=100)
     confidence: FitConfidence
     methodology_version: str

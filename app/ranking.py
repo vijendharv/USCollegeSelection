@@ -19,7 +19,7 @@ from app.models import (
     StudentProfile,
 )
 
-FIT_METHODOLOGY_VERSION = "1.1"
+FIT_METHODOLOGY_VERSION = "1.2"
 
 _WEIGHTS = {
     "Academic fit": Decimal("30"),
@@ -95,7 +95,7 @@ def rank_major_fits(
                 _score_fit(student, school, major, by_unit.get(school.institution.unit_id))
             )
 
-    ranked: list[MajorFitResult] = []
+    category_ranked: list[MajorFitResult] = []
     groups: dict[tuple[str, AdmissionCategory], list[MajorFitResult]] = defaultdict(list)
     for result in unranked:
         groups[(result.intended_major, result.category)].append(result)
@@ -111,10 +111,55 @@ def rank_major_fits(
                 item.unit_id,
             ),
         )
-        ranked.extend(
+        category_ranked.extend(
             item.model_copy(update={"rank": index}) for index, item in enumerate(ordered, 1)
         )
+    ranked = _add_national_ranks(student, category_ranked)
     return ranked, _consolidate(student, ranked)
+
+
+def _add_national_ranks(
+    student: StudentProfile,
+    category_ranked: list[MajorFitResult],
+) -> list[MajorFitResult]:
+    updates: dict[tuple[int, str], tuple[int | None, int]] = {}
+    confidence_order = {
+        FitConfidence.HIGH: 0,
+        FitConfidence.MEDIUM: 1,
+        FitConfidence.LOW: 2,
+    }
+    for major in student.preferences.intended_majors:
+        exact = [
+            item
+            for item in category_ranked
+            if item.intended_major == major
+            and item.program_offered is True
+            and item.match_granularity == 6
+        ]
+        ordered = sorted(
+            exact,
+            key=lambda item: (
+                confidence_order[item.confidence],
+                -item.overall_score,
+                item.unit_id,
+            ),
+        )
+        total = len(ordered)
+        ranked_keys = {
+            (item.unit_id, item.intended_major): index for index, item in enumerate(ordered, 1)
+        }
+        for item in (value for value in category_ranked if value.intended_major == major):
+            key = (item.unit_id, item.intended_major)
+            updates[key] = (ranked_keys.get(key), total)
+    return [
+        item.model_copy(
+            update={
+                "national_rank": updates[(item.unit_id, item.intended_major)][0],
+                "national_rank_total": updates[(item.unit_id, item.intended_major)][1],
+            }
+        )
+        for item in category_ranked
+    ]
 
 
 def _score_fit(

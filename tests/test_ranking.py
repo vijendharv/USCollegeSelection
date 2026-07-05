@@ -170,3 +170,30 @@ def test_six_digit_availability_and_four_digit_outcomes_are_combined() -> None:
     assert biology.match_granularity == 6
     assert biology.availability_cip_code == "260101"
     assert biology.ranking_cip_code == "2601"
+    assert biology.national_rank == 1
+    assert biology.national_rank_total == 1
+
+
+def test_national_rank_covers_exact_programs_across_categories() -> None:
+    offerings = [
+        *_offerings(),
+        *[
+            ProgramOffering(
+                unit_id=unit_id,
+                cip_code="260101",
+                cip_title="CIP 26.0101",
+                cip_level=6,
+                credential_level=3,
+                completion_count=completions,
+                source_name="IPEDS Completions",
+                dataset_version_id="test",
+            )
+            for unit_id, completions in ((9001, 40), (9002, 10))
+        ],
+    ]
+
+    ranked, _ = rank_major_fits(_profile(), _schools(), offerings)
+    biology = [item for item in ranked if item.intended_major == "Biology"]
+
+    assert {item.national_rank_total for item in biology} == {2}
+    assert sorted(item.national_rank for item in biology) == [1, 2]

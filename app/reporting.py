@@ -111,6 +111,7 @@ def _school_report(
         institution=institution,
         user_entered=candidate.user_entered,
         classification=classification,
+        high_school_gpa_benchmark=_gpa_benchmark_label(candidate),
         comparisons=comparisons,
         strengths=_unique(strengths),
         gaps=_unique(gaps),
@@ -118,6 +119,15 @@ def _school_report(
         warnings=_unique(warnings),
         suggested_actions=_unique(actions),
         source_references=sources,
+    )
+
+
+def _gpa_benchmark_label(candidate: ReportCandidate) -> str | None:
+    if not candidate.admissions_benchmark.gpas:
+        return None
+    return "; ".join(
+        f"{benchmark.type.value.title()} {benchmark.low}-{benchmark.high}/{benchmark.scale}"
+        for benchmark in candidate.admissions_benchmark.gpas
     )
 
 

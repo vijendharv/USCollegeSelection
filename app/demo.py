@@ -97,15 +97,19 @@ def run_offline_demo(
 
     existing = {name.casefold() for name in profile.preferences.existing_schools}
     preferred_states = set(profile.preferences.preferred_states)
-    candidates = [
+    national_candidates = [
         ReportCandidate(
             institution=institution,
             user_entered=institution.name.casefold() in existing,
         )
         for institution in institutions
+    ]
+    candidates = [
+        candidate
+        for candidate in national_candidates
         if not preferred_states
-        or institution.state in preferred_states
-        or institution.name.casefold() in existing
+        or candidate.institution.state in preferred_states
+        or candidate.user_entered
     ]
     complete_report = build_college_report(
         profile,
@@ -113,21 +117,34 @@ def run_offline_demo(
         dataset,
         generated_at=generated_at or datetime.now(UTC),
     )
-    major_rankings, consolidated_rankings = rank_major_fits(
+    local_rankings, consolidated_rankings = rank_major_fits(
         profile, complete_report.schools, offerings
     )
+    if len(candidates) == len(national_candidates):
+        major_rankings = local_rankings
+    else:
+        national_report = build_college_report(
+            profile,
+            national_candidates,
+            dataset,
+            generated_at=generated_at or datetime.now(UTC),
+        )
+        nationwide_rankings, _ = rank_major_fits(profile, national_report.schools, offerings)
+        major_rankings = _merge_national_ranks(local_rankings, nationwide_rankings)
     selected_rankings = _selected_major_rankings(
         complete_report.schools,
         major_rankings,
         schools_per_category=schools_per_category,
     )
-    selected_ids = {result.unit_id for result in selected_rankings}
-    selected_ids.update(
+    user_ids = {
         school.institution.unit_id for school in complete_report.schools if school.user_entered
-    )
+    }
+    student_supplied_rankings = [item for item in major_rankings if item.unit_id in user_ids]
+    selected_ids = {result.unit_id for result in selected_rankings}
+    selected_ids.update(user_ids)
     best_rank = {
         unit_id: min(item.rank for item in selected_rankings if item.unit_id == unit_id)
-        for unit_id in selected_ids
+        for unit_id in selected_ids - user_ids
     }
     report = complete_report.model_copy(
         update={
@@ -142,6 +159,7 @@ def run_offline_demo(
                     school.institution.unit_id,
                 ),
             ),
+            "student_supplied_rankings": student_supplied_rankings,
             "major_rankings": selected_rankings,
             "consolidated_rankings": [
                 result for result in consolidated_rankings if result.unit_id in selected_ids
@@ -214,15 +232,37 @@ def _selected_major_rankings(
     *,
     schools_per_category: int,
 ) -> list[MajorFitResult]:
-    selected = [item for item in rankings if item.rank <= schools_per_category]
     user_ids = {school.institution.unit_id for school in schools if school.user_entered}
-    selected_keys = {(item.unit_id, item.intended_major) for item in selected}
-    selected.extend(
-        item
-        for item in rankings
-        if item.unit_id in user_ids and (item.unit_id, item.intended_major) not in selected_keys
-    )
+    counts: Counter[tuple[str, str]] = Counter()
+    selected: list[MajorFitResult] = []
+    for item in rankings:
+        if item.unit_id in user_ids:
+            continue
+        key = (item.intended_major, item.category.value)
+        if counts[key] >= schools_per_category:
+            continue
+        selected.append(item)
+        counts[key] += 1
     return selected
+
+
+def _merge_national_ranks(
+    local_rankings: list[MajorFitResult],
+    nationwide_rankings: list[MajorFitResult],
+) -> list[MajorFitResult]:
+    national = {
+        (item.unit_id, item.intended_major): (item.national_rank, item.national_rank_total)
+        for item in nationwide_rankings
+    }
+    return [
+        item.model_copy(
+            update={
+                "national_rank": national[(item.unit_id, item.intended_major)][0],
+                "national_rank_total": national[(item.unit_id, item.intended_major)][1],
+            }
+        )
+        for item in local_rankings
+    ]
 
 
 def _build_fixture_archive(csv_path: Path, archive_path: Path, member: str) -> None:

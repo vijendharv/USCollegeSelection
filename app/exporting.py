@@ -29,7 +29,7 @@ from reportlab.platypus import (
 )
 
 from app.models.export import ExportedFile, ExportFormat, ExportResult
-from app.models.report import CollegeReport
+from app.models.report import CollegeReport, SchoolReport
 from app.storage.contracts import SessionFileStore
 
 _NAVY = "17365D"
@@ -41,6 +41,7 @@ _YELLOW = "FFF2CC"
 _RED = "FCE4D6"
 _GRAY = "E7E6E6"
 _THIN_GRAY = Side(style="thin", color="D9E1F2")
+_GPA_UNAVAILABLE = "Not available from current official dataset"
 
 
 def render_excel(report: CollegeReport) -> bytes:
@@ -49,6 +50,8 @@ def render_excel(report: CollegeReport) -> bytes:
     active_sheet = workbook.active
     if active_sheet is not None:
         workbook.remove(active_sheet)
+    if report.student_profile.preferences.existing_schools:
+        _student_supplied_colleges_sheet(workbook, report)
     _college_list_sheet(workbook, report)
     _major_rankings_sheet(workbook, report)
     _gap_analysis_sheet(workbook, report)
@@ -116,8 +119,9 @@ def render_pdf(report: CollegeReport) -> bytes:
         _pdf_summary(report, styles),
         Spacer(1, 12),
         Paragraph(_pdf_text(report.disclaimer), styles["Small"]),
-        PageBreak(),
     ]
+    story.extend(_pdf_student_supplied_colleges(report, styles))
+    story.append(PageBreak())
     story.extend(_pdf_major_ranking_sections(report, styles))
     if report.major_rankings:
         story.append(PageBreak())
@@ -130,6 +134,14 @@ def render_pdf(report: CollegeReport) -> bytes:
                     f"{category} | {school.classification.confidence.value.title()} confidence | "
                     f"{_pdf_text(school.institution.city)}, {_pdf_text(school.institution.state)}",
                     styles["BodyText"],
+                ),
+                Paragraph(
+                    "ACT composite 25th-75th: "
+                    f"{_pdf_text(_school_act_range(school))} "
+                    "| "
+                    "High-school GPA benchmark: "
+                    f"{_pdf_text(school.high_school_gpa_benchmark or _GPA_UNAVAILABLE)}",
+                    styles["Small"],
                 ),
                 Spacer(1, 6),
                 _pdf_comparisons(school.comparisons, styles),
@@ -195,6 +207,8 @@ def _college_list_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "City",
         "State",
         "Acceptance Rate",
+        "ACT Composite 25th-75th",
+        "High-School GPA Benchmark",
         "Cost of Attendance",
         "Average Net Price",
         "Graduation Rate",
@@ -211,6 +225,8 @@ def _college_list_sheet(workbook: Workbook, report: CollegeReport) -> None:
             _excel_text(item.institution.city),
             item.institution.state,
             item.institution.acceptance_rate,
+            _act_range(item.institution.act_composite_25, item.institution.act_composite_75),
+            item.high_school_gpa_benchmark or "Not available from current official dataset",
             item.institution.cost_of_attendance,
             item.institution.average_net_price,
             item.institution.graduation_rate,
@@ -223,19 +239,77 @@ def _college_list_sheet(workbook: Workbook, report: CollegeReport) -> None:
     _write_table_sheet(sheet, "CollegeListTable", headers, rows)
     for row_number, item in enumerate(report.schools, start=2):
         if item.institution.website:
-            cell = sheet.cell(row_number, 11)
+            cell = sheet.cell(row_number, 13)
             cell.hyperlink = item.institution.website
             cell.style = "Hyperlink"
-    for column in (7, 10):
+    for column in (7, 12):
         for cells in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for cell in cells:
                 cell.number_format = "0.0%"
-    for column in (8, 9):
+    for column in (10, 11):
         for cells in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for cell in cells:
                 cell.number_format = '"$"#,##0'
     _classification_colors(sheet, f"B2:B{max(2, sheet.max_row)}")
-    _set_widths(sheet, [30, 18, 12, 12, 16, 8, 15, 18, 17, 15, 28, 38, 38])
+    _set_widths(
+        sheet,
+        [30, 18, 12, 12, 16, 8, 15, 22, 36, 18, 17, 15, 28, 38, 38],
+    )
+
+
+def _student_supplied_colleges_sheet(workbook: Workbook, report: CollegeReport) -> None:
+    sheet = workbook.create_sheet("Student-Supplied Colleges")
+    headers = [
+        "Student-Supplied Name",
+        "Matched Institution",
+        "Intended Major",
+        "Classification",
+        "Fit Rank Within Classification",
+        "National Student-Major Fit Rank",
+        "National Rank Population",
+        "Fit Score",
+        "Fit Confidence",
+        "Match Status",
+    ]
+    school_by_name = {
+        school.institution.name.casefold(): school
+        for school in report.schools
+        if school.user_entered
+    }
+    ranking_by_key = {
+        (item.institution_name.casefold(), item.intended_major): item
+        for item in report.student_supplied_rankings
+    }
+    rows: list[list[Any]] = []
+    for supplied_name in report.student_profile.preferences.existing_schools:
+        school = school_by_name.get(supplied_name.casefold())
+        for major in report.student_profile.preferences.intended_majors:
+            ranking = (
+                ranking_by_key.get((school.institution.name.casefold(), major))
+                if school is not None
+                else None
+            )
+            rows.append(
+                [
+                    _excel_text(supplied_name),
+                    _excel_text(school.institution.name) if school else None,
+                    _excel_text(major),
+                    (
+                        school.classification.category.value.replace("_", " ").title()
+                        if school
+                        else None
+                    ),
+                    ranking.rank if ranking else None,
+                    ranking.national_rank if ranking else None,
+                    ranking.national_rank_total if ranking else None,
+                    float(ranking.overall_score) if ranking else None,
+                    ranking.confidence.value.title() if ranking else None,
+                    "Matched" if school else "Not found in current official dataset",
+                ]
+            )
+    _write_table_sheet(sheet, "StudentSuppliedCollegesTable", headers, rows)
+    _classification_colors(sheet, f"D2:D{max(2, sheet.max_row)}", column="D")
+    _set_widths(sheet, [30, 30, 24, 18, 24, 26, 22, 12, 14, 34])
 
 
 def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
@@ -244,7 +318,9 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "Intended Major",
         "Institution",
         "Classification",
-        "Major Rank",
+        "Fit Rank Within Classification",
+        "National Student-Major Fit Rank",
+        "National Rank Population",
         "Fit Score",
         "Fit Confidence",
         "Program Offered",
@@ -269,6 +345,8 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 _excel_text(item.institution_name),
                 item.category.value.replace("_", " ").title(),
                 item.rank,
+                item.national_rank,
+                item.national_rank_total,
                 float(item.overall_score),
                 item.confidence.value.title(),
                 "Yes"
@@ -290,14 +368,35 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
             ]
         )
     _write_table_sheet(sheet, "MajorRankingsTable", headers, rows)
-    for column in (5, 8, 12, 13, 14, 15, 16):
+    for column in (7, 10, 14, 15, 16, 17, 18):
         for cell in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for value in cell:
                 value.number_format = "0.0"
     _classification_colors(sheet, f"C2:C{max(2, sheet.max_row)}", column="C")
     _set_widths(
         sheet,
-        [24, 30, 18, 12, 12, 14, 16, 14, 16, 14, 24, 13, 13, 13, 13, 16, 38, 55],
+        [
+            24,
+            30,
+            18,
+            24,
+            26,
+            22,
+            12,
+            14,
+            16,
+            14,
+            16,
+            14,
+            24,
+            13,
+            13,
+            13,
+            13,
+            16,
+            38,
+            55,
+        ],
     )
 
 
@@ -465,7 +564,8 @@ def _sources_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 "",
                 None,
                 report.fit_methodology_version,
-                "Major-specific fit rank; admissions categories remain institution-level.",
+                "Student-specific national major fit and within-category rank; not a "
+                "commercial prestige ranking. Admissions categories remain institution-level.",
             ]
         )
     seen: set[tuple[str, str | None, Any]] = set()
@@ -568,6 +668,22 @@ def _excel_text(value: str | None) -> str | None:
     return f"'{value}" if value.startswith(("=", "+", "-", "@")) else value
 
 
+def _act_range(low: int | None, high: int | None) -> str | None:
+    if low is None or high is None:
+        return None
+    return f"{low}-{high}"
+
+
+def _school_act_range(school: SchoolReport) -> str:
+    return (
+        _act_range(
+            school.institution.act_composite_25,
+            school.institution.act_composite_75,
+        )
+        or "Not available"
+    )
+
+
 def _pdf_summary(report: CollegeReport, styles: Any) -> PDFTable:
     counts = {category: 0 for category in ("safety_likely", "target", "reach", "insufficient_data")}
     for item in report.schools:
@@ -600,14 +716,92 @@ def _pdf_summary(report: CollegeReport, styles: Any) -> PDFTable:
     return table
 
 
+def _pdf_student_supplied_colleges(report: CollegeReport, styles: Any) -> list[Any]:
+    supplied = report.student_profile.preferences.existing_schools
+    if not supplied:
+        return []
+    school_by_name = {
+        school.institution.name.casefold(): school
+        for school in report.schools
+        if school.user_entered
+    }
+    ranking_by_key = {
+        (item.institution_name.casefold(), item.intended_major): item
+        for item in report.student_supplied_rankings
+    }
+    data: list[list[Any]] = [
+        ["Student-supplied college", "Major", "Category", "Category rank", "National"]
+    ]
+    for supplied_name in supplied:
+        school = school_by_name.get(supplied_name.casefold())
+        for major in report.student_profile.preferences.intended_majors:
+            ranking = (
+                ranking_by_key.get((school.institution.name.casefold(), major))
+                if school is not None
+                else None
+            )
+            data.append(
+                [
+                    Paragraph(_pdf_text(supplied_name), styles["Small"]),
+                    Paragraph(_pdf_text(major), styles["Small"]),
+                    (
+                        school.classification.category.value.replace("_", " ").title()
+                        if school
+                        else "Not found"
+                    ),
+                    ranking.rank if ranking else "-",
+                    (
+                        f"{ranking.national_rank} of {ranking.national_rank_total}"
+                        if ranking and ranking.national_rank is not None
+                        else "Not ranked"
+                    ),
+                ]
+            )
+    table = PDFTable(
+        data,
+        colWidths=[2.2 * inch, 1.45 * inch, 1.2 * inch, 0.8 * inch, 1.05 * inch],
+        repeatRows=1,
+    )
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(f"#{_NAVY}")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.white, colors.HexColor(f"#{_LIGHT}")],
+                ),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D9E1F2")),
+            ]
+        )
+    )
+    return [
+        Spacer(1, 12),
+        Paragraph("Student-supplied colleges", styles["SchoolTitle"]),
+        Paragraph(
+            "These colleges are retained and ranked separately before generated recommendations.",
+            styles["Small"],
+        ),
+        Spacer(1, 6),
+        table,
+    ]
+
+
 def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]:
     if not report.major_rankings:
         return []
     content: list[Any] = [Paragraph("Fit rankings by intended major", styles["SchoolTitle"])]
     content.append(
         Paragraph(
-            "Fit ranks are major-specific. Admissions categories remain institution-level unless "
-            "a sourced program-specific rate is available.",
+            "National rank is this app's student-specific fit order among US institutions with "
+            "exact six-digit CIP availability; it is not a commercial or published prestige "
+            "ranking. Classification rank is calculated separately inside each admissions "
+            "category.",
             styles["Small"],
         )
     )
@@ -618,11 +812,24 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
         content.append(Spacer(1, 8))
         content.append(Paragraph(_pdf_text(major), styles["SchoolTitle"]))
         data: list[list[Any]] = [
-            ["Rank", "Institution", "Category", "Fit", "Program", "CIP", "Confidence"]
+            [
+                "National",
+                "Category rank",
+                "Institution",
+                "Category",
+                "Fit",
+                "Program",
+                "Confidence",
+            ]
         ]
         for item in (value for value in report.major_rankings if value.intended_major == major):
             data.append(
                 [
+                    (
+                        f"{item.national_rank} of {item.national_rank_total}"
+                        if item.national_rank is not None
+                        else "Not ranked"
+                    ),
                     item.rank,
                     Paragraph(_pdf_text(item.institution_name), styles["Small"]),
                     item.category.value.replace("_", " ").title(),
@@ -632,19 +839,18 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
                     else "No"
                     if item.program_offered is False
                     else "Unknown",
-                    f"{item.match_granularity}-digit" if item.match_granularity else "Unknown",
                     item.confidence.value.title(),
                 ]
             )
         table = PDFTable(
             data,
             colWidths=[
-                0.45 * inch,
-                2.35 * inch,
+                0.8 * inch,
+                0.65 * inch,
+                2.05 * inch,
                 1.15 * inch,
                 0.55 * inch,
                 0.75 * inch,
-                0.6 * inch,
                 0.8 * inch,
             ],
             repeatRows=1,

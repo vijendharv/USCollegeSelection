@@ -39,15 +39,27 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
     workbook = load_workbook(next(path for path in files if path.suffix == ".xlsx"))
     report = json.loads(next(path for path in files if path.suffix == ".json").read_text())
     assert "Harvard University" in pdf_text
-    assert workbook.sheetnames[0] == "College List"
+    assert workbook.sheetnames[0] == "Student-Supplied Colleges"
     assert len(report["schools"]) == 5
-    assert report["fit_methodology_version"] == "1.1"
+    assert report["fit_methodology_version"] == "1.2"
     assert report["major_rankings"]
+    assert report["student_supplied_rankings"]
+    assert {item["institution_name"] for item in report["student_supplied_rankings"]} == {
+        "Harvard University"
+    }
+    assert "Harvard University" not in {
+        item["institution_name"] for item in report["major_rankings"]
+    }
     assert (
         report["major_rankings"][0]["institution_name"]
         != "Arizona State University Campus Immersion"
     )
     assert "Major Rankings" in workbook.sheetnames
+    major_headers = [cell.value for cell in workbook["Major Rankings"][1]]
+    assert "National Student-Major Fit Rank" in major_headers
+    college_headers = [cell.value for cell in workbook["College List"][1]]
+    assert "ACT Composite 25th-75th" in college_headers
+    assert "High-School GPA Benchmark" in college_headers
 
 
 def test_offline_demo_reuses_existing_database(tmp_path: Path) -> None:
