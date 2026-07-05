@@ -515,7 +515,7 @@ Complete when automated tests inspect workbook structure, PDF text, and cross-fo
 
 Both renderers accept only the canonical `CollegeReport` and return bytes. They do not query DuckDB, call the network, or recalculate classifications. The export service publishes those bytes through `SessionFileStore`, which validates filenames, writes atomically into a private session directory, and applies owner-only permissions.
 
-The Excel renderer uses the five required sheets, native tables and filters, frozen headers, typed dates/currency/percentages, bounded widths, hyperlinks, application-tracker validation, and formula-injection escaping for externally derived text. The PDF renderer uses repeating comparison headers, explicit page breaks, page numbers, print-safe colors, sources, methodology, generated time, missing data, warnings, and the report disclaimer. Automated tests compare school names and categories back to the canonical model; rendered sample artifacts receive visual inspection before the milestone is released.
+The Excel renderer uses seven core sheets plus a conditional qualified-college addendum, native tables and filters, frozen headers, typed dates/currency/percentages, bounded widths, hyperlinks, application-tracker validation, and formula-injection escaping for externally derived text. The PDF renderer uses repeating comparison headers, explicit page breaks, page numbers, print-safe colors, sources, methodology, generated time, missing data, warnings, and the report disclaimer. Automated tests compare school names and categories back to the canonical model; rendered sample artifacts receive visual inspection before the milestone is released.
 
 #### Milestone 1.7 — Offline end-to-end demo
 
@@ -560,6 +560,21 @@ Deliverables:
 - Keep all downloads inside the explicit refresh workflow and all recommendation runs offline.
 
 Complete when a real schema-version-3 refresh joins all three free federal sources by UNITID, exact programs can rank differently within their four-digit field, fallback confidence is explicit, and automated plus real-data smoke tests pass.
+
+#### Milestone 1.10 — National major fit rank and admissions benchmarks
+
+Deliverables:
+
+- Keep the existing fit rank within each admissions category and label it explicitly.
+- Add a student-specific national fit position for each intended major across US institutions with confirmed six-digit CIP availability.
+- Add a separate national program-strength rank using major completions, field outcomes, and institution outcomes without student preferences or résumé evidence.
+- Require an 80-point student-fit floor, select up to ten strongest programs per admissions category, and place all remaining qualified colleges in a report addendum.
+- Show the national rank population and confidence; never describe the result as a published or commercial prestige rank.
+- Add ACT composite 25th-to-75th percentile ranges to the main college table.
+- Label admitted-student high-school GPA benchmarks as unavailable from the current official dataset unless a compatible sourced benchmark is present.
+- Put student-supplied colleges in a separate ranked table before generated recommendations and retain unresolved names visibly.
+
+Complete when national program-strength and student-fit ranks are deterministic across the full eligible institution universe, category ranks remain separate, the 80-point qualification floor is enforced without padding, supplied colleges are preserved, and JSON/PDF/XLSX include the qualified-college addendum and communicate source limitations consistently.
 
 ### Stage 2 — Documents
 

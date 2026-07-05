@@ -51,6 +51,7 @@ class SchoolReport(DomainModel):
     institution: Institution
     user_entered: bool
     classification: ClassificationResult
+    high_school_gpa_benchmark: str | None = None
     comparisons: list[ComparisonRow]
     strengths: list[str]
     gaps: list[str]
@@ -75,7 +76,9 @@ class CollegeReport(DomainModel):
     student_profile: StudentProfile
     dataset: DatasetVersion
     schools: list[SchoolReport]
+    student_supplied_rankings: list[MajorFitResult] = Field(default_factory=list)
     major_rankings: list[MajorFitResult] = Field(default_factory=list)
+    addendum_rankings: list[MajorFitResult] = Field(default_factory=list)
     consolidated_rankings: list[ConsolidatedFitResult] = Field(default_factory=list)
     fit_methodology_version: str | None = None
     holistic_context: HolisticContext = Field(default_factory=HolisticContext)

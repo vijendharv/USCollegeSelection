@@ -57,7 +57,7 @@ The command discovers the current official institution archive from the College 
 
 ## Run the complete demo locally
 
-The demo runs on your computer and uses the full real College Scorecard database. No cloud deployment or paid service is involved. Results are fit-ranked separately for each intended major rather than selected alphabetically.
+The demo runs on your computer and uses the full real College Scorecard database. No cloud deployment or paid service is involved. Results are fit-ranked separately for each intended major rather than selected alphabetically. Each exact six-digit CIP match also receives a student-specific national fit position across the eligible US institutions analyzed; this is an internal evidence-based rank, not a commercial prestige ranking.
 
 First install dependencies and download the real public data once:
 
@@ -82,7 +82,7 @@ college-report.pdf
 college-report.xlsx
 ```
 
-The JSON, PDF, and Excel workbook are generated from the same canonical report. Profiles must contain one to three intended majors in priority order. By default, the demo returns up to ten ranked college-major combinations per Safety / Likely, Target, Reach, and Insufficient Data category when enough defensible results exist. Admissions categories remain institution-level; the fit rank is major-specific.
+The JSON, PDF, and Excel workbook are generated from the same canonical report. Profiles must contain one to three intended majors in priority order. A college-major combination must score at least 80/100 and have an exact six-digit CIP program match to enter the qualified pool. Within each Safety / Likely, Target, Reach, and Insufficient Data category, the demo selects up to ten colleges by national program strength first and student fit second; it never samples randomly or takes schools alphabetically. Remaining qualified colleges appear in an addendum. Admissions categories remain institution-level. Student-supplied colleges are retained and shown in a separate table before generated recommendations.
 
 To test another student, copy the example, edit it, and supply its path:
 
@@ -111,7 +111,8 @@ uv run python -m app demo \
 ### Current demo limitations
 
 - College Scorecard is the latest available annual federal data, not live admissions data.
-- Many institutions do not report compatible GPA or test-score ranges, so they may be labeled Insufficient Data.
+- ACT composite ranges are shown and used when reported. College Scorecard does not provide admitted-student high-school GPA ranges, so the report labels that benchmark as unavailable from the current official dataset instead of implying a failed download.
+- A school may be labeled Insufficient Data when no compatible GPA or submitted SAT/ACT comparison is available.
 - Major-specific admissions selectivity, current deadlines, fees, and supplements are not yet populated.
 - Exact program availability uses six-digit IPEDS CIP data; ranking evidence uses four-digit Scorecard field-of-study outcomes and falls back to two-digit families when finer data is missing. None of these sources proves direct admission, program capacity, or program-specific selectivity.
 - Transcript and résumé PDF parsing begins in Stage 2; Milestone 1.7 accepts confirmed profile JSON.

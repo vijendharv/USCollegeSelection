@@ -24,5 +24,6 @@ Each completed milestone should document:
 | 1.7 Local end-to-end demo | Complete | [1.7 Local end-to-end demo](1.7-offline-demo.md) |
 | 1.8 Fit-ranked shortlist and holistic alignment | Complete | [1.8 Fit-ranked shortlist and holistic alignment](1.8-fit-ranked-shortlist.md) |
 | 1.9 Granular CIP program data | Complete | [1.9 Granular CIP program data](1.9-granular-cip-data.md) |
+| 1.10 National major fit rank and admissions benchmarks | Complete | [1.10 National major fit rank](1.10-national-major-fit-rank.md) |
 
 Use [TEMPLATE.md](TEMPLATE.md) when completing the next milestone.

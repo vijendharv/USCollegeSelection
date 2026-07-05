@@ -16,6 +16,7 @@ def test_excel_has_required_sheets_tables_and_frozen_headers() -> None:
     workbook = load_workbook(BytesIO(render_excel(sample_report())))
 
     assert workbook.sheetnames == [
+        "Student-Supplied Colleges",
         "College List",
         "Major Rankings",
         "Gap Analysis",
@@ -39,12 +40,25 @@ def test_excel_values_match_canonical_report() -> None:
     assert [row[1] for row in rows] == [
         item.classification.category.value.replace("_", " ").title() for item in report.schools
     ]
+    headers = [cell.value for cell in sheet[1]]
+    assert "ACT Composite 25th-75th" in headers
+    assert "High-School GPA Benchmark" in headers
     assert all(
         not (isinstance(cell.value, str) and cell.value.startswith("="))
         for worksheet in workbook.worksheets
         for row in worksheet.iter_rows()
         for cell in row
     )
+
+
+def test_student_supplied_colleges_are_separated_at_top() -> None:
+    report = sample_report()
+    workbook = load_workbook(BytesIO(render_excel(report)), data_only=False)
+    sheet = workbook["Student-Supplied Colleges"]
+
+    assert workbook.sheetnames[0] == "Student-Supplied Colleges"
+    assert sheet["A2"].value == report.student_profile.preferences.existing_schools[0]
+    assert sheet["N2"].value == "Matched"
 
 
 def test_excel_escapes_formula_injection_text() -> None:

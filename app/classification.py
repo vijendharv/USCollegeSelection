@@ -97,7 +97,10 @@ def _compare_gpa(
     excluded: list[str],
 ) -> None:
     if not benchmark.gpas:
-        missing.append("institution GPA benchmark")
+        missing.append(
+            "admitted-student high-school GPA benchmark is not available from the current "
+            "official dataset"
+        )
         return
     candidates = [gpa for gpa in student.academic.gpas if gpa.scope is GPAScope.CUMULATIVE]
     compatible: list[tuple[GPARecord, GPABenchmark]] = [
