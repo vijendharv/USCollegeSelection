@@ -21,7 +21,7 @@ from app.models import (
     StudentProfile,
     assess_profile,
 )
-from app.ranking import FIT_METHODOLOGY_VERSION, rank_major_fits
+from app.ranking import BEST_FIT_THRESHOLD, FIT_METHODOLOGY_VERSION, rank_major_fits
 from app.reporting import build_college_report
 from app.storage import DuckDBCollegeStore, LocalSessionFileStore, StorageError
 
@@ -131,7 +131,7 @@ def run_offline_demo(
         )
         nationwide_rankings, _ = rank_major_fits(profile, national_report.schools, offerings)
         major_rankings = _merge_national_ranks(local_rankings, nationwide_rankings)
-    selected_rankings = _selected_major_rankings(
+    selected_rankings, addendum_rankings = _partition_major_rankings(
         complete_report.schools,
         major_rankings,
         schools_per_category=schools_per_category,
@@ -161,6 +161,7 @@ def run_offline_demo(
             ),
             "student_supplied_rankings": student_supplied_rankings,
             "major_rankings": selected_rankings,
+            "addendum_rankings": addendum_rankings,
             "consolidated_rankings": [
                 result for result in consolidated_rankings if result.unit_id in selected_ids
             ][:10],
@@ -196,6 +197,7 @@ def run_offline_demo(
         "fit_ranked": True,
         "fit_methodology_version": FIT_METHODOLOGY_VERSION,
         "major_rankings": len(report.major_rankings),
+        "addendum_rankings": len(report.addendum_rankings),
         "output_directory": str(output_directory),
         "files": [file.path for file in exports.files] + [str(report_path)],
     }
@@ -226,24 +228,34 @@ def _load_all_institutions(store: DuckDBCollegeStore) -> list[Institution]:
         offset += len(page)
 
 
-def _selected_major_rankings(
+def _partition_major_rankings(
     schools: list[SchoolReport],
     rankings: list[MajorFitResult],
     *,
     schools_per_category: int,
-) -> list[MajorFitResult]:
+) -> tuple[list[MajorFitResult], list[MajorFitResult]]:
     user_ids = {school.institution.unit_id for school in schools if school.user_entered}
     counts: Counter[tuple[str, str]] = Counter()
     selected: list[MajorFitResult] = []
+    addendum: list[MajorFitResult] = []
     for item in rankings:
         if item.unit_id in user_ids:
             continue
-        key = (item.intended_major, item.category.value)
-        if counts[key] >= schools_per_category:
+        if (
+            item.overall_score < BEST_FIT_THRESHOLD
+            or item.program_offered is not True
+            or item.match_granularity != 6
+        ):
             continue
-        selected.append(item)
+        key = (item.intended_major, item.category.value)
+        recommendation_rank = counts[key] + 1
+        if counts[key] >= schools_per_category:
+            addendum.append(item.model_copy(update={"rank": recommendation_rank}))
+            counts[key] += 1
+            continue
+        selected.append(item.model_copy(update={"rank": recommendation_rank}))
         counts[key] += 1
-    return selected
+    return selected, addendum
 
 
 def _merge_national_ranks(
@@ -251,7 +263,12 @@ def _merge_national_ranks(
     nationwide_rankings: list[MajorFitResult],
 ) -> list[MajorFitResult]:
     national = {
-        (item.unit_id, item.intended_major): (item.national_rank, item.national_rank_total)
+        (item.unit_id, item.intended_major): (
+            item.national_rank,
+            item.national_rank_total,
+            item.national_program_strength_rank,
+            item.national_program_strength_rank_total,
+        )
         for item in nationwide_rankings
     }
     return [
@@ -259,6 +276,10 @@ def _merge_national_ranks(
             update={
                 "national_rank": national[(item.unit_id, item.intended_major)][0],
                 "national_rank_total": national[(item.unit_id, item.intended_major)][1],
+                "national_program_strength_rank": national[(item.unit_id, item.intended_major)][2],
+                "national_program_strength_rank_total": national[
+                    (item.unit_id, item.intended_major)
+                ][3],
             }
         )
         for item in local_rankings

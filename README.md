@@ -82,7 +82,7 @@ college-report.pdf
 college-report.xlsx
 ```
 
-The JSON, PDF, and Excel workbook are generated from the same canonical report. Profiles must contain one to three intended majors in priority order. By default, the demo returns the highest student-major fit results in each Safety / Likely, Target, Reach, and Insufficient Data category, up to ten per category when enough defensible results exist; it never samples randomly or takes schools alphabetically. Admissions categories remain institution-level; both the national fit position and the within-category fit rank are major-specific. Student-supplied colleges are retained and shown in a separate table before generated recommendations.
+The JSON, PDF, and Excel workbook are generated from the same canonical report. Profiles must contain one to three intended majors in priority order. A college-major combination must score at least 80/100 and have an exact six-digit CIP program match to enter the qualified pool. Within each Safety / Likely, Target, Reach, and Insufficient Data category, the demo selects up to ten colleges by national program strength first and student fit second; it never samples randomly or takes schools alphabetically. Remaining qualified colleges appear in an addendum. Admissions categories remain institution-level. Student-supplied colleges are retained and shown in a separate table before generated recommendations.
 
 To test another student, copy the example, edit it, and supply its path:
 

@@ -33,8 +33,12 @@ class MajorFitResult(DomainModel):
     rank: int = Field(ge=1)
     national_rank: int | None = Field(default=None, ge=1)
     national_rank_total: int = Field(default=0, ge=0)
+    national_program_strength_rank: int | None = Field(default=None, ge=1)
+    national_program_strength_rank_total: int = Field(default=0, ge=0)
     overall_score: Decimal = Field(ge=0, le=100)
     confidence: FitConfidence
+    program_strength_score: Decimal = Field(ge=0, le=100)
+    program_strength_confidence: FitConfidence
     methodology_version: str
     cip_codes: list[str] = Field(default_factory=list)
     availability_cip_code: str | None = None

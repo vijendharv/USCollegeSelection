@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.models import (
+    AcademicStanding,
     AdmissionCategory,
     HolisticProfile,
     ProgramOffering,
@@ -197,3 +198,58 @@ def test_national_rank_covers_exact_programs_across_categories() -> None:
 
     assert {item.national_rank_total for item in biology} == {2}
     assert sorted(item.national_rank for item in biology) == [1, 2]
+    assert {item.national_program_strength_rank_total for item in biology} == {2}
+
+
+def test_program_strength_precedes_a_small_fit_advantage_within_category() -> None:
+    schools = _schools()
+    schools[0].institution.state = "NV"
+    for school in schools:
+        school.classification.triggered_rules = [
+            rule.model_copy(update={"standing": AcademicStanding.ABOVE})
+            if rule.standing is not None
+            else rule
+            for rule in school.classification.triggered_rules
+        ]
+    profile = _profile().model_copy(
+        update={
+            "preferences": StudentPreferences(
+                residence_state="CA",
+                intended_majors=["Biology"],
+                preferred_states=["CA"],
+            )
+        }
+    )
+    offerings = [
+        ProgramOffering(
+            unit_id=unit_id,
+            cip_code="260101",
+            cip_title="Biology",
+            cip_level=6,
+            credential_level=3,
+            completion_count=completions,
+            source_name="IPEDS Completions",
+            dataset_version_id="test",
+        )
+        for unit_id, completions in ((9001, 100), (9002, 1))
+    ]
+    offerings.append(
+        ProgramOffering(
+            unit_id=9001,
+            cip_code="2601",
+            cip_title="Biology, General",
+            cip_level=4,
+            credential_level=3,
+            completion_count=100,
+            median_earnings_1yr=95000,
+            source_name="College Scorecard field of study",
+            dataset_version_id="test",
+        )
+    )
+
+    ranked, _ = rank_major_fits(profile, schools, offerings)
+
+    assert all(item.overall_score >= 80 for item in ranked)
+    assert ranked[0].program_strength_score > ranked[1].program_strength_score
+    assert ranked[0].overall_score < ranked[1].overall_score
+    assert ranked[0].rank == 1

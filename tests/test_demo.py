@@ -41,7 +41,7 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
     assert "Harvard University" in pdf_text
     assert workbook.sheetnames[0] == "Student-Supplied Colleges"
     assert len(report["schools"]) == 5
-    assert report["fit_methodology_version"] == "1.2"
+    assert report["fit_methodology_version"] == "1.3"
     assert report["major_rankings"]
     assert report["student_supplied_rankings"]
     assert {item["institution_name"] for item in report["student_supplied_rankings"]} == {
@@ -85,6 +85,27 @@ def test_offline_demo_reuses_existing_database(tmp_path: Path) -> None:
 
     assert first["database_built"] is True
     assert second["database_built"] is False
+
+
+def test_demo_selects_top_qualified_program_and_exports_remainder(tmp_path: Path) -> None:
+    result = run_offline_demo(
+        profile_path=PROFILE,
+        fixture_csv_path=FIXTURE,
+        database_path=tmp_path / "college.duckdb",
+        output_root=tmp_path / "output",
+        schools_per_category=1,
+    )
+    files = [Path(path) for path in cast(list[str], result["files"])]
+    report = json.loads(next(path for path in files if path.suffix == ".json").read_text())
+    workbook = load_workbook(next(path for path in files if path.suffix == ".xlsx"))
+    pdf = PdfReader(next(path for path in files if path.suffix == ".pdf"))
+    pdf_text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+
+    assert report["addendum_rankings"]
+    assert all(float(item["overall_score"]) >= 80 for item in report["major_rankings"])
+    assert all(float(item["overall_score"]) >= 80 for item in report["addendum_rankings"])
+    assert workbook.sheetnames[-1] == "Additional Qualified Colleges"
+    assert "Addendum: additional qualified colleges" in pdf_text
 
 
 def test_demo_requires_real_database_without_explicit_fixture(tmp_path: Path) -> None:

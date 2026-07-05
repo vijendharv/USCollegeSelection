@@ -19,7 +19,8 @@ from app.models import (
     StudentProfile,
 )
 
-FIT_METHODOLOGY_VERSION = "1.2"
+FIT_METHODOLOGY_VERSION = "1.3"
+BEST_FIT_THRESHOLD = Decimal(80)
 
 _WEIGHTS = {
     "Academic fit": Decimal("30"),
@@ -95,9 +96,10 @@ def rank_major_fits(
                 _score_fit(student, school, major, by_unit.get(school.institution.unit_id))
             )
 
+    national_ranked = _add_national_ranks(student, unranked)
     category_ranked: list[MajorFitResult] = []
     groups: dict[tuple[str, AdmissionCategory], list[MajorFitResult]] = defaultdict(list)
-    for result in unranked:
+    for result in national_ranked:
         groups[(result.intended_major, result.category)].append(result)
     major_order = {major: index for index, major in enumerate(student.preferences.intended_majors)}
     category_order = {category: index for index, category in enumerate(AdmissionCategory)}
@@ -107,6 +109,12 @@ def rank_major_fits(
             key=lambda item: (
                 item.program_offered is not True,
                 item.program_offered is False,
+                item.overall_score < BEST_FIT_THRESHOLD,
+                item.national_program_strength_rank is None,
+                item.national_program_strength_rank or 10_000,
+                _confidence_order(item.program_strength_confidence),
+                -item.program_strength_score,
+                _confidence_order(item.confidence),
                 -item.overall_score,
                 item.unit_id,
             ),
@@ -114,20 +122,14 @@ def rank_major_fits(
         category_ranked.extend(
             item.model_copy(update={"rank": index}) for index, item in enumerate(ordered, 1)
         )
-    ranked = _add_national_ranks(student, category_ranked)
-    return ranked, _consolidate(student, ranked)
+    return category_ranked, _consolidate(student, category_ranked)
 
 
 def _add_national_ranks(
     student: StudentProfile,
     category_ranked: list[MajorFitResult],
 ) -> list[MajorFitResult]:
-    updates: dict[tuple[int, str], tuple[int | None, int]] = {}
-    confidence_order = {
-        FitConfidence.HIGH: 0,
-        FitConfidence.MEDIUM: 1,
-        FitConfidence.LOW: 2,
-    }
+    updates: dict[tuple[int, str], tuple[int | None, int, int | None, int]] = {}
     for major in student.preferences.intended_majors:
         exact = [
             item
@@ -139,8 +141,16 @@ def _add_national_ranks(
         ordered = sorted(
             exact,
             key=lambda item: (
-                confidence_order[item.confidence],
+                _confidence_order(item.confidence),
                 -item.overall_score,
+                item.unit_id,
+            ),
+        )
+        strength_ordered = sorted(
+            exact,
+            key=lambda item: (
+                _confidence_order(item.program_strength_confidence),
+                -item.program_strength_score,
                 item.unit_id,
             ),
         )
@@ -148,14 +158,27 @@ def _add_national_ranks(
         ranked_keys = {
             (item.unit_id, item.intended_major): index for index, item in enumerate(ordered, 1)
         }
+        strength_keys = {
+            (item.unit_id, item.intended_major): index
+            for index, item in enumerate(strength_ordered, 1)
+        }
         for item in (value for value in category_ranked if value.intended_major == major):
             key = (item.unit_id, item.intended_major)
-            updates[key] = (ranked_keys.get(key), total)
+            updates[key] = (
+                ranked_keys.get(key),
+                total,
+                strength_keys.get(key),
+                len(strength_ordered),
+            )
     return [
         item.model_copy(
             update={
                 "national_rank": updates[(item.unit_id, item.intended_major)][0],
                 "national_rank_total": updates[(item.unit_id, item.intended_major)][1],
+                "national_program_strength_rank": updates[(item.unit_id, item.intended_major)][2],
+                "national_program_strength_rank_total": updates[
+                    (item.unit_id, item.intended_major)
+                ][3],
             }
         )
         for item in category_ranked
@@ -177,6 +200,7 @@ def _score_fit(
         _holistic_component(student, major, major_evidence),
     ]
     available = [component for component in components if component.score is not None]
+    program_strength_score, program_strength_confidence = _program_strength(components)
     available_weight = sum((component.weight for component in available), Decimal(0))
     weighted = sum(
         (
@@ -216,6 +240,8 @@ def _score_fit(
         rank=1,
         overall_score=score,
         confidence=confidence,
+        program_strength_score=program_strength_score,
+        program_strength_confidence=program_strength_confidence,
         methodology_version=FIT_METHODOLOGY_VERSION,
         cip_codes=_cip_codes(major),
         availability_cip_code=major_evidence.availability_cip_code,
@@ -226,6 +252,35 @@ def _score_fit(
         missing_inputs=list(dict.fromkeys(missing)),
         explanation=explanation,
     )
+
+
+def _program_strength(components: list[FitComponent]) -> tuple[Decimal, FitConfidence]:
+    weights = {"Major fit": Decimal(60), "Outcomes": Decimal(40)}
+    available = [
+        component
+        for component in components
+        if component.name in weights and component.score is not None
+    ]
+    if not available:
+        return Decimal(0), FitConfidence.LOW
+    available_weight = sum((weights[item.name] for item in available), Decimal(0))
+    score = (
+        sum(
+            (item.score * weights[item.name] for item in available if item.score is not None),
+            Decimal(0),
+        )
+        / available_weight
+    )
+    confidence = FitConfidence.HIGH if len(available) == 2 else FitConfidence.MEDIUM
+    return _round(score), confidence
+
+
+def _confidence_order(confidence: FitConfidence) -> int:
+    return {
+        FitConfidence.HIGH: 0,
+        FitConfidence.MEDIUM: 1,
+        FitConfidence.LOW: 2,
+    }[confidence]
 
 
 def _academic_component(school: SchoolReport) -> FitComponent:

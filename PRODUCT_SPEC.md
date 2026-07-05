@@ -241,14 +241,15 @@ Hard filters and soft preferences must be visibly different. The app must ask fo
 1. Institution.
 2. Safety / Likely, Target, Reach, or Insufficient Data.
 3. Classification confidence.
-4. Student-major fit rank within the admissions category.
+4. Recommendation rank within the admissions category after the fit floor and program-strength ordering.
 5. City and state.
 6. Intended-major availability.
 7. Overall acceptance rate.
 8. National student-major fit position and comparison population.
-9. Published GPA and test-score profile, clearly labeling unavailable benchmarks.
-10. Tuition, total cost of attendance, and net price.
-11. Application deadlines.
+9. National program-strength rank, score, confidence, and comparison population.
+10. Published GPA and test-score profile, clearly labeling unavailable benchmarks.
+11. Tuition, total cost of attendance, and net price.
+12. Application deadlines.
 
 ### 10.2 Optional columns
 
@@ -394,11 +395,12 @@ The app must generate a formatted `.xlsx` workbook containing:
 
 1. **Student-Supplied Colleges** — user-entered schools ranked separately by major and category, including unresolved names.
 2. **College List** — all selected and user-entered schools, classification, confidence, fit rank, admissions, cost, outcomes, deadlines, and links.
-3. **Major Rankings** — national student-major fit position, national comparison population, within-category rank, component scores, and confidence.
+3. **Major Rankings** — national program-strength and student-major fit positions, comparison populations, within-category recommendation rank, component scores, and confidence.
 4. **Gap Analysis** — student-versus-school measures, gaps, statuses, and sources.
 5. **Student Profile** — confirmed manual inputs, transcript-derived academic summary, and résumé-derived activity summary.
 6. **Application Tracker** — school, plan, deadline, status, fee, supplements, and notes.
 7. **Sources & Methodology** — source URLs, data years, verification dates, classification rules, and methodology version.
+8. **Additional Qualified Colleges** — exact-program matches scoring at least 80 that were not among the ten strongest programs selected for their category.
 
 Workbook requirements:
 
@@ -483,7 +485,7 @@ The MVP is complete when:
 10. Deadlines link to an official institutional source.
 11. The gap analysis covers every selected and user-entered school.
 12. PDF output prints without clipped tables or missing content.
-13. Excel output contains all seven required sheets and matches the UI and PDF.
+13. Excel output contains all seven core sheets plus the qualified-college addendum when applicable and matches the UI and PDF.
 14. Re-running against the same data and methodology produces the same classifications.
 15. The product never describes admission or affordability as guaranteed.
 16. Résumé evidence is shown as holistic context and cannot silently override the deterministic academic/selectivity classification.
