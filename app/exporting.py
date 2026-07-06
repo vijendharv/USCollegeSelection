@@ -149,15 +149,26 @@ def render_pdf(report: CollegeReport) -> bytes:
         )
     story.extend(_pdf_thresholds(report, styles))
     story.extend(_pdf_student_supplied_colleges(report, styles))
+    ordered_schools = _ordered_detail_schools(report)
+    story.extend(_pdf_navigation(ordered_schools, bool(report.addendum_rankings), styles))
     story.append(PageBreak())
+    story.append(Paragraph('<a name="recommendation-tables"/>', styles["Small"]))
     story.extend(_pdf_major_ranking_sections(report, styles))
     if report.major_rankings:
         story.append(PageBreak())
-    for index, school in enumerate(report.schools):
+    for index, school in enumerate(ordered_schools):
         category = school.classification.category.value.replace("_", " ").title()
         story.extend(
             [
-                Paragraph(_pdf_text(school.institution.name), styles["SchoolTitle"]),
+                Paragraph(
+                    f'<a name="school-{school.institution.unit_id}"/>'
+                    f"{_pdf_text(school.institution.name)}",
+                    styles["SchoolTitle"],
+                ),
+                Paragraph(
+                    '<link href="#report-menu" color="#17365D">Back to report navigation</link>',
+                    styles["Small"],
+                ),
                 Paragraph(
                     f"{category} | {school.classification.confidence.value.title()} confidence | "
                     f"{_pdf_text(school.institution.city)}, {_pdf_text(school.institution.state)}",
@@ -182,11 +193,68 @@ def render_pdf(report: CollegeReport) -> bytes:
         story.extend(_pdf_list("Warnings", school.warnings, styles))
         story.extend(_pdf_list("Suggested actions", school.suggested_actions, styles))
         story.extend(_pdf_sources(school.source_references, styles))
-        if index < len(report.schools) - 1:
+        if index < len(ordered_schools) - 1:
             story.append(PageBreak())
     story.extend(_pdf_addendum(report, styles))
     document.build(story, onFirstPage=_pdf_footer, onLaterPages=_pdf_footer)
     return output.getvalue()
+
+
+def _ordered_detail_schools(report: CollegeReport) -> list[SchoolReport]:
+    """Match detail-page order to first appearance in the report's top tables."""
+    school_by_id = {item.institution.unit_id: item for item in report.schools}
+    ordered_ids: list[int] = []
+
+    user_school_by_name = {
+        item.institution.name.casefold(): item.institution.unit_id
+        for item in report.schools
+        if item.user_entered
+    }
+    for supplied_name in report.student_profile.preferences.existing_schools:
+        unit_id = user_school_by_name.get(supplied_name.casefold())
+        if unit_id is not None and unit_id not in ordered_ids:
+            ordered_ids.append(unit_id)
+
+    for ranking in (*report.student_supplied_rankings, *report.major_rankings):
+        if ranking.unit_id in school_by_id and ranking.unit_id not in ordered_ids:
+            ordered_ids.append(ranking.unit_id)
+    for school in report.schools:
+        if school.institution.unit_id not in ordered_ids:
+            ordered_ids.append(school.institution.unit_id)
+    return [school_by_id[unit_id] for unit_id in ordered_ids]
+
+
+def _pdf_navigation(
+    schools: list[SchoolReport],
+    has_addendum: bool,
+    styles: Any,
+) -> list[Any]:
+    content: list[Any] = [
+        Spacer(1, 12),
+        Paragraph('<a name="report-menu"/>Report navigation', styles["SchoolTitle"]),
+        Paragraph(
+            '<link href="#recommendation-tables" color="#17365D">Recommendation tables</link>',
+            styles["BodyText"],
+        ),
+    ]
+    for index, school in enumerate(schools, 1):
+        category = school.classification.category.value.replace("_", " ").title()
+        content.append(
+            Paragraph(
+                f'{index}. <link href="#school-{school.institution.unit_id}" '
+                f'color="#17365D">{_pdf_text(school.institution.name)}</link> - {category}',
+                styles["Small"],
+            )
+        )
+    if has_addendum:
+        content.append(
+            Paragraph(
+                '<link href="#qualified-addendum" color="#17365D">'
+                "Additional qualified colleges</link>",
+                styles["BodyText"],
+            )
+        )
+    return content
 
 
 def export_college_report(
@@ -1259,7 +1327,10 @@ def _pdf_addendum(report: CollegeReport, styles: Any) -> list[Any]:
     )
     return [
         PageBreak(),
-        Paragraph("Addendum: additional qualified colleges", styles["SchoolTitle"]),
+        Paragraph(
+            '<a name="qualified-addendum"/>Addendum: additional qualified colleges',
+            styles["SchoolTitle"],
+        ),
         Paragraph(
             "These colleges met their category's applied fit threshold but fell below the "
             "strongest programs selected for their admissions category.",

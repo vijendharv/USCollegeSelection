@@ -425,6 +425,9 @@ The MVP should use a transparent internal **fit rank** rather than scrape or rep
 The PDF must:
 
 - include the confirmed profile, shortlist, and gap analysis;
+- order school-detail pages by each school's first appearance in the recommendation tables;
+- include a clickable report-navigation menu with links to recommendation tables, every school-detail section, and the addendum when present;
+- provide a link from every school-detail section back to the report-navigation menu;
 - use readable page breaks, repeating table headers, and print-safe colors;
 - avoid clipped columns and interactive-only content;
 - include source links, generation date, and methodology version; and
