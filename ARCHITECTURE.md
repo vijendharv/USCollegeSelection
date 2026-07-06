@@ -603,6 +603,17 @@ Deliverables:
 
 Complete when targeted regressions, the full suite, and a real-data smoke test pass, and JSON/PDF/XLSX expose the new methodology and data-quality context.
 
+#### Milestone 1.14 — PDF detail ordering and navigation
+
+Deliverables:
+
+- Order school-detail pages by first appearance in the student-supplied and generated recommendation tables.
+- De-duplicate schools that appear for multiple intended majors while preserving their earliest position.
+- Add a clickable report-navigation menu linking to the recommendation tables, each school detail, and the addendum.
+- Add a return-to-menu link on every school-detail page.
+
+Complete when PDF tests verify deterministic detail ordering and internal destinations, and a rendered report confirms that navigation remains legible.
+
 ### Stage 2 — Documents
 
 - Add text-based and scanned PDF extraction.

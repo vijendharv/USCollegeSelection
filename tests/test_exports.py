@@ -6,8 +6,14 @@ from pathlib import Path
 from openpyxl import load_workbook
 from pypdf import PdfReader
 
-from app.exporting import export_college_report, render_excel, render_pdf
+from app.exporting import (
+    _ordered_detail_schools,
+    export_college_report,
+    render_excel,
+    render_pdf,
+)
 from app.models import ExportFormat
+from app.ranking import rank_major_fits
 from app.storage import LocalSessionFileStore
 from tests.test_reporting import sample_report
 
@@ -102,6 +108,42 @@ def test_pdf_has_page_numbers_and_ascii_dashes() -> None:
     assert len(texts) >= 5
     assert all(f"Page {index}" in text for index, text in enumerate(texts, start=1))
     assert all("\u2013" not in text and "\u2014" not in text for text in texts)
+
+
+def test_pdf_has_clickable_navigation_destinations() -> None:
+    report = sample_report()
+    reader = PdfReader(BytesIO(render_pdf(report)))
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    assert "Report navigation" in text
+    assert "Back to report navigation" in text
+    menu_links = reader.pages[0].get("/Annots", [])
+    assert len(menu_links) >= len(report.schools) + 1
+    assert all(page.get("/Annots") for page in reader.pages[1:])
+
+
+def test_unranked_student_supplied_school_leads_detail_order() -> None:
+    report = sample_report()
+
+    ordered = _ordered_detail_schools(report)
+
+    assert ordered[0].institution.name == report.student_profile.preferences.existing_schools[0]
+
+
+def test_pdf_detail_order_follows_first_recommendation_table_appearance() -> None:
+    report = sample_report()
+    rankings, _ = rank_major_fits(report.student_profile, report.schools, [])
+    ranking_by_id = {item.unit_id: item for item in rankings}
+    expected = [report.schools[2], report.schools[0], report.schools[3], report.schools[1]]
+    reordered = report.model_copy(
+        update={"major_rankings": [ranking_by_id[item.institution.unit_id] for item in expected]}
+    )
+
+    ordered = _ordered_detail_schools(reordered)
+
+    assert [item.institution.unit_id for item in ordered] == [
+        item.institution.unit_id for item in expected
+    ]
 
 
 def test_export_service_writes_both_formats_through_session_store(tmp_path: Path) -> None:
