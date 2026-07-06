@@ -99,6 +99,7 @@ class RecommendationSettings(DomainModel):
     adaptive_floor: Decimal = Field(default=Decimal(70), ge=0, le=100)
     minimum_results_per_category: int = Field(default=5, ge=1, le=10)
     maximum_results_per_category: int = Field(default=10, ge=1, le=10)
+    include_regional_baseline: bool = True
 
     @model_validator(mode="after")
     def validate_thresholds_and_counts(self) -> RecommendationSettings:

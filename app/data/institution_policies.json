@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-07-06",
+  "institutions": [
+    {
+      "name": "University of Washington-Seattle Campus",
+      "test_policy": "not_visible_primary_review",
+      "test_policy_source_url": "https://admit.washington.edu/apply/first-year/how-to-apply/test-scores/",
+      "test_policy_source_date": "2026-07-06"
+    },
+    {
+      "name": "University of California-Berkeley",
+      "test_policy": "blind",
+      "test_policy_source_url": "https://admission.universityofcalifornia.edu/counselors/preparing-freshman-students/freshman-requirements.html",
+      "test_policy_source_date": "2026-07-06",
+      "residency_selectivity": "high",
+      "residency_policy_source_url": "https://admission.universityofcalifornia.edu/admission-requirements/first-year-requirements/out-of-state-students.html",
+      "residency_policy_source_date": "2026-07-06"
+    },
+    {
+      "name": "University of California-Los Angeles",
+      "test_policy": "blind",
+      "test_policy_source_url": "https://admission.universityofcalifornia.edu/counselors/preparing-freshman-students/freshman-requirements.html",
+      "test_policy_source_date": "2026-07-06",
+      "residency_selectivity": "high",
+      "residency_policy_source_url": "https://admission.universityofcalifornia.edu/admission-requirements/first-year-requirements/out-of-state-students.html",
+      "residency_policy_source_date": "2026-07-06"
+    },
+    {
+      "name": "University of Virginia-Main Campus",
+      "residency_selectivity": "high",
+      "residency_policy_source_url": "https://admission.virginia.edu/node/326",
+      "residency_policy_source_date": "2026-07-06"
+    },
+    {
+      "name": "The University of Texas at Austin",
+      "residency_selectivity": "very_high",
+      "automatic_admission_policy": "Automatic freshman admission fills 75% of Texas-resident spaces; the published rank cutoff changes by entry cycle.",
+      "residency_policy_source_url": "https://admissions.utexas.edu/apply/review-decision-process/",
+      "residency_policy_source_date": "2026-07-06"
+    }
+  ]
+}

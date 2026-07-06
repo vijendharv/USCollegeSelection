@@ -129,9 +129,22 @@ def benchmark() -> AdmissionsBenchmark:
 
 
 def sample_report() -> CollegeReport:
+    likely_benchmark = AdmissionsBenchmark(
+        gpas=[
+            GPABenchmark(
+                type=GPAType.UNWEIGHTED,
+                scale=Decimal("4"),
+                low=Decimal("3.0"),
+                high=Decimal("3.6"),
+            )
+        ],
+        source_url="https://example.edu/admissions",
+        source_date=date(2026, 5, 1),
+    )
     candidates = [
         ReportCandidate(
             institution=school(1, "Likely University", sat_low=1100, sat_high=1300),
+            admissions_benchmark=likely_benchmark,
         ),
         ReportCandidate(
             institution=school(2, "Target University"), admissions_benchmark=benchmark()
@@ -154,7 +167,7 @@ def test_report_contains_all_categories_and_reproducible_metadata() -> None:
     assert {item.classification.category for item in report.schools} == set(AdmissionCategory)
     assert report.generated_at == GENERATED_AT
     assert report.report_version == "1.1"
-    assert report.methodology_version == "1.0"
+    assert report.methodology_version == "1.1"
     assert report.disclaimer == DISCLAIMER
     snapshot = {
         "report_version": report.report_version,

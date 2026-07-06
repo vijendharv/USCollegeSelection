@@ -67,6 +67,7 @@ class CategoryThresholdResult(DomainModel):
     selected_candidates: int = Field(ge=0)
     addendum_candidates: int = Field(ge=0)
     threshold_relaxed: bool
+    warning: str | None = None
 
 
 class ConsolidatedFitResult(DomainModel):

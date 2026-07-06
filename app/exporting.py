@@ -140,6 +140,12 @@ def render_pdf(report: CollegeReport) -> bytes:
             Paragraph(f"Data note: {_pdf_text(value)}", styles["Small"])
             for value in report.data_quality_warnings
         )
+    if report.recommendation_warnings:
+        story.append(Spacer(1, 6))
+        story.extend(
+            Paragraph(f"Recommendation caution: {_pdf_text(value)}", styles["Small"])
+            for value in report.recommendation_warnings
+        )
     if report.program_data_vintages:
         story.append(
             Paragraph(
@@ -301,6 +307,7 @@ def _college_list_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "Classification",
         "Confidence",
         "User Entered",
+        "Regional Baseline",
         "City",
         "State",
         "Acceptance Rate",
@@ -319,6 +326,7 @@ def _college_list_sheet(workbook: Workbook, report: CollegeReport) -> None:
             item.classification.category.value.replace("_", " ").title(),
             item.classification.confidence.value.title(),
             "Yes" if item.user_entered else "No",
+            "Yes" if item.regional_baseline else "No",
             _excel_text(item.institution.city),
             item.institution.state,
             item.institution.acceptance_rate,
@@ -336,21 +344,21 @@ def _college_list_sheet(workbook: Workbook, report: CollegeReport) -> None:
     _write_table_sheet(sheet, "CollegeListTable", headers, rows)
     for row_number, item in enumerate(report.schools, start=2):
         if item.institution.website:
-            cell = sheet.cell(row_number, 13)
+            cell = sheet.cell(row_number, 14)
             cell.hyperlink = item.institution.website
             cell.style = "Hyperlink"
-    for column in (7, 12):
+    for column in (8, 13):
         for cells in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for cell in cells:
                 cell.number_format = "0.0%"
-    for column in (10, 11):
+    for column in (11, 12):
         for cells in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for cell in cells:
                 cell.number_format = '"$"#,##0'
     _classification_colors(sheet, f"B2:B{max(2, sheet.max_row)}")
     _set_widths(
         sheet,
-        [30, 18, 12, 12, 16, 8, 15, 22, 36, 18, 17, 15, 28, 38, 38],
+        [30, 18, 12, 12, 16, 16, 8, 15, 22, 36, 18, 17, 15, 28, 38, 38],
     )
 
 
@@ -599,6 +607,7 @@ def _adaptive_thresholds_sheet(workbook: Workbook, report: CollegeReport) -> Non
         "Selected Candidates",
         "Addendum Candidates",
         "Threshold Relaxed",
+        "Caution",
     ]
     rows = [
         [
@@ -614,12 +623,13 @@ def _adaptive_thresholds_sheet(workbook: Workbook, report: CollegeReport) -> Non
             item.selected_candidates,
             item.addendum_candidates,
             "Yes" if item.threshold_relaxed else "No",
+            _excel_text(item.warning),
         ]
         for item in report.category_thresholds
     ]
     _write_table_sheet(sheet, "AdaptiveThresholdsTable", headers, rows)
     _classification_colors(sheet, f"B2:B{max(2, sheet.max_row)}", column="B")
-    _set_widths(sheet, [24, 18, 14, 18, 18, 18, 20, 24, 22, 20, 20, 18])
+    _set_widths(sheet, [24, 18, 14, 18, 18, 18, 20, 24, 22, 20, 20, 18, 50])
 
 
 def _threshold_for(
@@ -750,6 +760,24 @@ def _student_profile_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 gpa.source.value,
             ]
         )
+    for gpa in report.calculated_gpas:
+        rows.append(
+            [
+                "Calculated academics",
+                f"{gpa.scope.value.replace('_', ' ').title()} GPA",
+                f"{gpa.value}/{gpa.scale}" if gpa.value is not None else "Unavailable",
+                _excel_text(gpa.caveat),
+            ]
+        )
+    for signal in report.preparation_signals:
+        rows.append(
+            [
+                "Preparation",
+                signal.code.replace("_", " ").title(),
+                _excel_text(signal.message),
+                signal.level,
+            ]
+        )
     for score in report.student_profile.academic.tests:
         label = score.test.value.upper()
         if score.section:
@@ -840,6 +868,10 @@ def _sources_sheet(workbook: Workbook, report: CollegeReport) -> None:
         rows.append(["Program data", _excel_text(vintage), "", None, "", "Source vintage"])
     for warning in report.data_quality_warnings:
         rows.append(["Data quality", "Source-vintage warning", "", None, "", _excel_text(warning)])
+    for warning in report.recommendation_warnings:
+        rows.append(
+            ["Recommendations", "Adaptive-threshold caution", "", None, "", _excel_text(warning)]
+        )
     seen: set[tuple[str, str | None, Any]] = set()
     for item in report.schools:
         for source in item.source_references:

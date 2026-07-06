@@ -614,6 +614,21 @@ Deliverables:
 
 Complete when PDF tests verify deterministic detail ordering and internal destinations, and a rendered report confirms that navigation remains legible.
 
+#### Milestone 1.15 — Policy-aware, state-aware recommendations
+
+Deliverables:
+
+- Apply reviewable, sourced institution overrides for test policy, residency selectivity, and major-admission policy without pretending the federal dataset contains those fields.
+- Use the student's residence state to distinguish in-state and out-of-state public-school context; apply a one-category penalty only when a sourced policy marks nonresident selectivity high or very high.
+- Exclude tests from test-blind or primary-review-hidden schools and prevent test-only evidence from creating a Safety / Likely result.
+- Calculate transparent cumulative, core, STEM, grades 10-11, internal weighted, and UC GPA variants; publish caveats and leave UC GPA unavailable unless A-G and UC-honors eligibility are confirmed.
+- Report grade trend and intended-major preparation separately from the institution admission category.
+- Evaluate a visibly labeled regional baseline for supported residence states, beginning with Washington, while retaining user exclusions and preference warnings.
+- Preserve adaptive thresholds and program-strength ordering, but show a prominent caution whenever a category threshold is relaxed.
+- Replace generic-only advice with policy-, residency-, cost-, major-, and pre-health-aware next steps.
+
+Complete when policy, state, GPA, preparation, and regression tests pass; JSON, PDF, and Excel expose the new evidence and cautions; and unknown policy data never becomes favorable evidence.
+
 ### Stage 2 — Documents
 
 - Add text-based and scanned PDF extraction.

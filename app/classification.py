@@ -21,11 +21,17 @@ from app.models.classification import (
     ClassificationRule,
     GPABenchmark,
 )
-from app.models.college import DatasetVersion, Institution
+from app.models.college import (
+    DatasetVersion,
+    Institution,
+    Ownership,
+    ResidencySelectivity,
+    TestPolicy,
+)
 from app.models.preferences import TestSubmissionPlan
 from app.models.student import StudentProfile
 
-METHODOLOGY_VERSION = "1.0"
+METHODOLOGY_VERSION = "1.1"
 HIGHLY_SELECTIVE_RATE = 0.20
 LIKELY_MINIMUM_RATE = 0.50
 
@@ -68,6 +74,7 @@ def classify_admission(
 
     rules.extend(signal.rule for signal in signals)
     category = _category(rate, signals)
+    category = _apply_residency_context(student, institution, category, rules, missing)
     confidence = _confidence(category, rate, signals, benchmark)
     source_dates = sorted(
         {date for date in (dataset.release_date, benchmark.source_date) if date is not None}
@@ -83,7 +90,16 @@ def classify_admission(
         excluded_factors=_unique(excluded),
         source_dates=source_dates,
         source_urls=_unique(
-            [url for url in (dataset.source_url, benchmark.source_url) if url is not None]
+            [
+                url
+                for url in (
+                    dataset.source_url,
+                    benchmark.source_url,
+                    institution.test_policy_source_url,
+                    institution.residency_policy_source_url,
+                )
+                if url is not None
+            ]
         ),
         explanation=_explanation(category, confidence, signals, rate),
     )
@@ -139,8 +155,24 @@ def _compare_tests(
     missing: list[str],
     excluded: list[str],
 ) -> None:
+    if institution.test_policy in {
+        TestPolicy.BLIND,
+        TestPolicy.NOT_VISIBLE_PRIMARY_REVIEW,
+    }:
+        excluded.append(
+            "SAT and ACT excluded because the institution does not use them in primary review"
+        )
+        return
     if student.preferences.test_submission_plan is TestSubmissionPlan.DO_NOT_SUBMIT:
         excluded.append("SAT and ACT: student does not plan to submit scores")
+        return
+    if (
+        student.preferences.test_submission_plan is TestSubmissionPlan.UNDECIDED
+        and institution.test_policy is TestPolicy.OPTIONAL
+    ):
+        excluded.append(
+            "SAT and ACT excluded because submission is undecided and the policy is not required"
+        )
         return
     totals = [score for score in student.academic.tests if score.section is None]
     sat = _best_total(totals, StandardizedTest.SAT)
@@ -220,9 +252,60 @@ def _category(rate: float | None, signals: list[_Signal]) -> AdmissionCategory:
     standings = {signal.standing for signal in signals}
     if AcademicStanding.BELOW in standings:
         return AdmissionCategory.REACH
-    if rate is not None and rate >= LIKELY_MINIMUM_RATE and standings == {AcademicStanding.ABOVE}:
+    has_gpa = any(signal.rule.code.startswith("gpa_") for signal in signals)
+    if (
+        rate is not None
+        and rate >= LIKELY_MINIMUM_RATE
+        and standings == {AcademicStanding.ABOVE}
+        and has_gpa
+    ):
         return AdmissionCategory.SAFETY_LIKELY
     return AdmissionCategory.TARGET
+
+
+def _apply_residency_context(
+    student: StudentProfile,
+    institution: Institution,
+    category: AdmissionCategory,
+    rules: list[ClassificationRule],
+    missing: list[str],
+) -> AdmissionCategory:
+    if institution.ownership is not Ownership.PUBLIC:
+        return category
+    residence = student.preferences.residence_state
+    if residence is None:
+        missing.append("student state of residence")
+        return category
+    if residence == institution.state:
+        rules.append(
+            ClassificationRule(
+                code="in_state_public_context",
+                message="Student is in-state for this public institution.",
+            )
+        )
+        return category
+    if institution.residency_selectivity not in {
+        ResidencySelectivity.HIGH,
+        ResidencySelectivity.VERY_HIGH,
+    }:
+        if institution.residency_selectivity is ResidencySelectivity.UNKNOWN:
+            missing.append("institution nonresident selectivity policy")
+        return category
+    rules.append(
+        ClassificationRule(
+            code="out_of_state_public_adjustment",
+            message=(
+                "The student is out-of-state and this public institution documents materially "
+                "different resident/nonresident admission context."
+            ),
+            student_value=residence,
+            school_benchmark=institution.state,
+        )
+    )
+    return {
+        AdmissionCategory.SAFETY_LIKELY: AdmissionCategory.TARGET,
+        AdmissionCategory.TARGET: AdmissionCategory.REACH,
+    }.get(category, category)
 
 
 def _confidence(
@@ -234,7 +317,8 @@ def _confidence(
     if category is AdmissionCategory.INSUFFICIENT_DATA:
         return ClassificationConfidence.LOW
     evidence = len(signals) + int(rate is not None)
-    if evidence >= 3 and (benchmark.source_date is not None or not benchmark.gpas):
+    has_gpa = any(signal.rule.code.startswith("gpa_") for signal in signals)
+    if evidence >= 3 and has_gpa and benchmark.source_date is not None:
         return ClassificationConfidence.HIGH
     if evidence >= 2:
         return ClassificationConfidence.MEDIUM

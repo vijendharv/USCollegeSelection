@@ -537,6 +537,10 @@ The MVP is complete when:
 17. Manual entry supports multiple courses and subjects, partial records, edits, and unknown values without fabricating missing data.
 18. Transcript parsing preserves AP/Honors designations and reported GPA types, and the classifier never compares incompatible weighted and unweighted GPA values as if they were equivalent.
 19. Transcript and résumé uploads accept PDF only; transcripts enforce 15 pages/15 MB and résumés enforce 6 pages/10 MB.
+20. The student's state is used for in-state/out-of-state public-school context and supported regional baselines; state never substitutes for academic fit.
+21. Test-blind and primary-review-hidden policies exclude SAT/ACT from classification, and test-only evidence cannot produce Safety / Likely.
+22. App-calculated GPA variants display their rule and caveats; UC GPA remains unavailable without confirmed A-G and UC-honors inputs.
+23. Every relaxed adaptive threshold is displayed as a recommendation caution in canonical JSON, PDF, and Excel.
 
 ## 19. Future enhancements
 
