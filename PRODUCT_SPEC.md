@@ -1,8 +1,19 @@
 # US College Selection — Product Specification
 
-**Version:** 0.7.0
-**Status:** Initial draft  
-**Last updated:** 2026-06-30
+**Version:** 0.8.0
+**Status:** Active product requirements and staged delivery roadmap
+**Last updated:** 2026-07-06
+
+### Implementation status
+
+This specification describes both delivered behavior and the remaining MVP roadmap.
+
+- **Implemented in Stage 1:** manual student profiles, deterministic admissions classification, real local federal college data in DuckDB, six-digit CIP program confirmation, fit and program-strength ranking, adaptive category thresholds, student-supplied college handling, gap analysis, canonical JSON, PDF, and Excel exports, résumé-review guardrails, and data-source hardening.
+- **Planned for Stage 2:** transcript and résumé PDF extraction, OCR, evidence-region review, and confirmation UI. The current application accepts confirmed profile JSON or manual model input; it does not yet parse uploaded documents.
+- **Planned for Stage 3:** the ChatGPT Apps SDK interface, MCP tools, interactive pin/remove/replace actions, and embedded results UI.
+- **Planned for Stage 4:** current institution-page deadlines and testing policies, additional source reconciliation, and deeper data-quality monitoring.
+
+A requirement stated with “must” remains an MVP requirement even when its delivery stage is still marked planned above.
 
 ## 1. Product summary
 
@@ -57,7 +68,7 @@ The product is decision support, not an admissions predictor. It must never desc
 - Expected or actual high-school graduation year.
 - State of residence.
 - Intended entry year and term.
-- At least one intended major or broad field of study.
+- At least one specific intended major with a reviewed six-digit CIP mapping.
 - At least one academic input: GPA, class rank, test score, or one course with a subject and grade.
 
 ### 6.2 Optional fields
@@ -74,11 +85,14 @@ The product is decision support, not an admissions predictor. It must never desc
 - Campus setting, enrollment size, public/private status, and religious affiliation.
 - HBCU, women's college, or other institution-type preferences.
 - Existing college list.
+- Recommendation settings: fixed or adaptive threshold mode, initial fit threshold, adaptive floor, minimum desired results per category, and maximum main-table results per category.
 - Early Decision or Early Action preferences.
 - Extracurricular strength and relevant special circumstances.
 - A student résumé containing activities, leadership, employment, service, projects, awards, and skills.
 
 Budget and test scores are optional. When budget is absent, cost must remain visible but must not filter or penalize schools. When test scores are absent or withheld, the app must use other supported data and lower confidence where appropriate.
+
+Profiles may contain one to three intended majors in priority order. Inputs that name only an unsupported broad family, such as `Engineering` or `Business`, must produce a clear blocking message requesting a specific program; four-digit field evidence must not be presented as proof that an exact major is offered.
 
 ### 6.3 Manual academic entry
 
@@ -235,6 +249,8 @@ The system must:
 - return 5–10 schools in each category when defensible; and
 - report that too few matches exist rather than padding a category with weak recommendations.
 
+Exact six-digit CIP availability is required for generated recommendations. Four-digit Scorecard fields may contribute outcomes and ranking evidence, and two-digit families may provide explicitly labeled context, but neither may independently confirm that the exact intended major is offered.
+
 Hard filters and soft preferences must be visibly different. The app must ask for confirmation before treating an ambiguous preference as a hard exclusion.
 
 ## 10. Recommendation results
@@ -280,6 +296,20 @@ Users must be able to:
 - see why a school received its classification;
 - open source and admissions pages; and
 - regenerate recommendations without losing pinned schools.
+
+### 10.4 Recommendation qualification settings
+
+Recommendation thresholds are stored in each student profile and applied independently to every intended-major and admissions-category group.
+
+- Default mode: `adaptive`.
+- Default initial student-fit threshold: 80/100.
+- Default adaptive floor: 70/100.
+- Default minimum desired options per category: 5.
+- Default maximum options in a main category table: 10.
+- Adaptive mode lowers only a sparse category, one point at a time, until its minimum is met or its floor is reached.
+- Fixed mode never lowers the initial threshold.
+- Every output must show the applied threshold, whether it was relaxed, and the exact, qualified, selected, and addendum candidate counts.
+- A category must remain below its desired minimum when not enough exact-program candidates meet the configured floor; it must never be padded with weaker candidates.
 
 ## 11. Classification methodology
 
@@ -382,6 +412,11 @@ The MVP should use a transparent internal **fit rank** rather than scrape or rep
 - Prefer a current official institution page for deadlines when sources conflict.
 - Display conflicts and unresolved discrepancies.
 - Never fabricate missing GPA, rank, deadline, cost, or major-selectivity data.
+- Record and display the College Scorecard and IPEDS program-data vintages used by each report.
+- Warn when the IPEDS program release materially trails the College Scorecard release.
+- Validate the row-retention rate and representative rejected values when normalizing live CIP codes; fail the refresh on material format drift rather than silently loading a substantially incomplete program dataset.
+- When multiple official Scorecard archive links match, select the newest dated release deterministically and retain the chosen source URL.
+- Enforce a decompressed-size ceiling when extracting downloaded CSV archives.
 
 ## 15. Reports and downloads
 
@@ -399,7 +434,7 @@ The PDF must:
 
 The app must generate a formatted `.xlsx` workbook containing:
 
-1. **Student-Supplied Colleges** — user-entered schools ranked separately by major and category, including unresolved names.
+1. **Student-Supplied Colleges** *(when provided)* — user-entered schools ranked separately by major and category, including unresolved names.
 2. **College List** — all selected and user-entered schools, classification, confidence, fit rank, admissions, cost, outcomes, deadlines, and links.
 3. **Major Rankings** — national program-strength and student-major fit positions, comparison populations, within-category recommendation rank, component scores, and confidence.
 4. **Gap Analysis** — student-versus-school measures, gaps, statuses, and sources.
@@ -407,7 +442,7 @@ The app must generate a formatted `.xlsx` workbook containing:
 6. **Application Tracker** — school, plan, deadline, status, fee, supplements, and notes.
 7. **Sources & Methodology** — source URLs, data years, verification dates, classification rules, and methodology version.
 8. **Adaptive Thresholds** — the initial, floor, and applied threshold plus candidate counts for every major and admissions category.
-9. **Additional Qualified Colleges** — exact-program matches meeting the category's applied threshold that were not among the strongest programs selected for its main table.
+9. **Additional Qualified Colleges** *(when applicable)* — exact-program matches meeting the category's applied threshold that were not among the strongest programs selected for its main table.
 
 Workbook requirements:
 
@@ -492,7 +527,7 @@ The MVP is complete when:
 10. Deadlines link to an official institutional source.
 11. The gap analysis covers every selected and user-entered school.
 12. PDF output prints without clipped tables or missing content.
-13. Excel output contains all seven core sheets plus the qualified-college addendum when applicable and matches the UI and PDF.
+13. Excel output contains the seven always-generated sheets—College List, Major Rankings, Adaptive Thresholds, Gap Analysis, Student Profile, Application Tracker, and Sources & Methodology—plus Student-Supplied Colleges and Additional Qualified Colleges when applicable, and matches the UI and PDF.
 14. Re-running against the same data and methodology produces the same classifications.
 15. The product never describes admission or affordability as guaranteed.
 16. Résumé evidence is shown as holistic context and cannot silently override the deterministic academic/selectivity classification.
