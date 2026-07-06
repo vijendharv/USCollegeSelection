@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
+from app.academics import analyze_preparation, calculate_gpas
 from app.classification import METHODOLOGY_VERSION, classify_admission
 from app.costs import comparable_cost
 from app.models.academic import CourseLevel
@@ -48,6 +49,10 @@ def build_college_report(
         student_profile=student,
         dataset=dataset,
         schools=schools,
+        calculated_gpas=calculate_gpas(student.academic.courses),
+        preparation_signals=analyze_preparation(
+            student.academic.courses, student.preferences.intended_majors
+        ),
         holistic_context=holistic_context
         or HolisticContext(
             themes=student.holistic.themes,
@@ -86,6 +91,11 @@ def _school_report(
         unknowns.append("intended-major preparation benchmark is not available")
     warnings = list(classification.excluded_factors)
     warnings.extend(_preference_warnings(student, institution, candidate.user_entered))
+    if candidate.regional_baseline:
+        warnings.append(
+            "State-aware regional baseline retained for comparison; this label is not an "
+            "admissions advantage."
+        )
     if any(row.status is GapStatus.OVER_BUDGET for row in comparisons):
         warnings.append("Published cost exceeds the stated annual budget.")
     if (
@@ -96,7 +106,34 @@ def _school_report(
         warnings.append(
             "Average net price is not a student-specific estimate; use the school's calculator."
         )
-    actions = ["Verify current admissions requirements and deadlines with the institution."]
+    actions = [
+        "Verify current admissions requirements, major policy, and deadlines with the institution."
+    ]
+    if institution.test_policy.value in {"blind", "not_visible_primary_review"}:
+        actions.append(
+            "Do not center the application plan on SAT/ACT; this school does not use scores "
+            "in primary review."
+        )
+    if (
+        institution.ownership.value == "public"
+        and student.preferences.residence_state != institution.state
+    ):
+        actions.append(
+            "Review the institution's current nonresident admission policy and nonresident cost."
+        )
+    if institution.major_admission_type.value == "unknown":
+        actions.append(
+            "Confirm whether the intended major is open, capped, direct-admit, or requires "
+            "later admission."
+        )
+    if any(
+        "med" in major.casefold() or "neuro" in major.casefold() or "biology" in major.casefold()
+        for major in student.preferences.intended_majors
+    ):
+        actions.append(
+            "Check pre-health advising, research access, clinical opportunities, and "
+            "prerequisite sequencing."
+        )
     if gaps:
         actions.append("Review the academic gaps when planning the application strategy.")
     if unknowns:
@@ -111,6 +148,7 @@ def _school_report(
     return SchoolReport(
         institution=institution,
         user_entered=candidate.user_entered,
+        regional_baseline=candidate.regional_baseline,
         classification=classification,
         high_school_gpa_benchmark=_gpa_benchmark_label(candidate),
         comparisons=comparisons,
@@ -257,6 +295,25 @@ def _source_references(
                 source_date=benchmark.source_date,
             )
         )
+    for label, url, source_date in (
+        ("test policy", institution.test_policy_source_url, institution.test_policy_source_date),
+        (
+            "residency policy",
+            institution.residency_policy_source_url,
+            institution.residency_policy_source_date,
+        ),
+        (
+            "major admission policy",
+            institution.major_policy_source_url,
+            institution.major_policy_source_date,
+        ),
+    ):
+        if url or source_date:
+            sources.append(
+                SourceReference(
+                    name=f"{institution.name} {label}", url=url, source_date=source_date
+                )
+            )
     return sources
 
 

@@ -27,7 +27,9 @@ from app.models import (
     ThresholdMode,
     assess_profile,
 )
+from app.policies import apply_institution_policies
 from app.ranking import FIT_METHODOLOGY_VERSION, rank_major_fits
+from app.regional import is_regional_baseline
 from app.reporting import build_college_report
 from app.storage import DuckDBCollegeStore, LocalSessionFileStore, StorageError
 
@@ -93,7 +95,7 @@ def run_offline_demo(
             )
 
     with DuckDBCollegeStore(database_path) as college_store:
-        institutions = _load_all_institutions(college_store)
+        institutions = apply_institution_policies(_load_all_institutions(college_store))
         dataset = college_store.current_dataset_version()
         offerings = college_store.get_program_offerings(
             [institution.unit_id for institution in institutions]
@@ -107,6 +109,10 @@ def run_offline_demo(
         ReportCandidate(
             institution=institution,
             user_entered=institution.name.casefold() in existing,
+            regional_baseline=(
+                profile.preferences.recommendation_settings.include_regional_baseline
+                and is_regional_baseline(profile.preferences.residence_state, institution.name)
+            ),
         )
         for institution in institutions
     ]
@@ -116,6 +122,7 @@ def run_offline_demo(
         if not preferred_states
         or candidate.institution.state in preferred_states
         or candidate.user_entered
+        or candidate.regional_baseline
     ]
     complete_report = build_college_report(
         profile,
@@ -155,9 +162,14 @@ def run_offline_demo(
     student_supplied_rankings = [item for item in major_rankings if item.unit_id in user_ids]
     selected_ids = {result.unit_id for result in selected_rankings}
     selected_ids.update(user_ids)
+    regional_ids = {
+        school.institution.unit_id for school in complete_report.schools if school.regional_baseline
+    }
+    selected_ids.update(regional_ids)
+    ranked_ids = {result.unit_id for result in selected_rankings}
     best_rank = {
         unit_id: min(item.rank for item in selected_rankings if item.unit_id == unit_id)
-        for unit_id in selected_ids - user_ids
+        for unit_id in ranked_ids
     }
     report = complete_report.model_copy(
         update={
@@ -190,6 +202,9 @@ def run_offline_demo(
             "data_quality_warnings": _data_quality_warnings(
                 dataset.release_date, IPEDS_COMPLETIONS_YEAR
             ),
+            "recommendation_warnings": [
+                item.warning for item in category_thresholds if item.warning
+            ],
         }
     )
 
@@ -325,6 +340,13 @@ def _partition_major_rankings(
                     selected_candidates=min(len(qualified), schools_per_category),
                     addendum_candidates=max(0, len(qualified) - schools_per_category),
                     threshold_relaxed=applied < settings.initial_fit_threshold,
+                    warning=(
+                        f"{major} / {category.value.replace('_', ' ').title()}: fit threshold "
+                        f"was relaxed from {settings.initial_fit_threshold} to {applied}; review "
+                        "these options with greater caution."
+                        if applied < settings.initial_fit_threshold
+                        else None
+                    ),
                 )
             )
     return selected, addendum, thresholds

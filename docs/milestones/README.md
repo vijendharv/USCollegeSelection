@@ -29,5 +29,6 @@ Each completed milestone should document:
 | 1.12 Adaptive category fit thresholds | Complete | [1.12 Adaptive category fit thresholds](1.12-adaptive-fit-thresholds.md) |
 | 1.13 Audit correctness and data hardening | Complete | [1.13 Audit correctness and data hardening](1.13-audit-hardening.md) |
 | 1.14 PDF detail ordering and navigation | Complete | [1.14 PDF detail ordering and navigation](1.14-pdf-navigation.md) |
+| 1.15 Policy-aware, state-aware recommendations | Complete | [1.15 Policy-aware, state-aware recommendations](1.15-policy-aware-recommendations.md) |
 
 Use [TEMPLATE.md](TEMPLATE.md) when completing the next milestone.

@@ -9,6 +9,7 @@ from typing import Literal
 
 from pydantic import Field
 
+from app.models.academic import CalculatedGPA, PreparationSignal
 from app.models.base import DomainModel
 from app.models.classification import AdmissionsBenchmark, ClassificationResult
 from app.models.college import DatasetVersion, Institution
@@ -45,11 +46,13 @@ class ReportCandidate(DomainModel):
     institution: Institution
     admissions_benchmark: AdmissionsBenchmark = Field(default_factory=AdmissionsBenchmark)
     user_entered: bool = False
+    regional_baseline: bool = False
 
 
 class SchoolReport(DomainModel):
     institution: Institution
     user_entered: bool
+    regional_baseline: bool = False
     classification: ClassificationResult
     high_school_gpa_benchmark: str | None = None
     comparisons: list[ComparisonRow]
@@ -84,5 +87,8 @@ class CollegeReport(DomainModel):
     fit_methodology_version: str | None = None
     program_data_vintages: list[str] = Field(default_factory=list)
     data_quality_warnings: list[str] = Field(default_factory=list)
+    recommendation_warnings: list[str] = Field(default_factory=list)
+    calculated_gpas: list[CalculatedGPA] = Field(default_factory=list)
+    preparation_signals: list[PreparationSignal] = Field(default_factory=list)
     holistic_context: HolisticContext = Field(default_factory=HolisticContext)
     disclaimer: str

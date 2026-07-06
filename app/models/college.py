@@ -17,6 +17,30 @@ class Ownership(StrEnum):
     UNKNOWN = "unknown"
 
 
+class TestPolicy(StrEnum):
+    REQUIRED = "required"
+    OPTIONAL = "optional"
+    BLIND = "blind"
+    NOT_VISIBLE_PRIMARY_REVIEW = "not_visible_primary_review"
+    UNKNOWN = "unknown"
+
+
+class ResidencySelectivity(StrEnum):
+    NONE = "none"
+    MODERATE = "moderate"
+    HIGH = "high"
+    VERY_HIGH = "very_high"
+    UNKNOWN = "unknown"
+
+
+class MajorAdmissionType(StrEnum):
+    OPEN = "open"
+    CAPACITY_CONSTRAINED = "capacity_constrained"
+    DIRECT_ADMIT = "direct_admit"
+    SECONDARY_ADMISSION = "secondary_admission"
+    UNKNOWN = "unknown"
+
+
 class Institution(DomainModel):
     unit_id: int
     name: str
@@ -26,6 +50,18 @@ class Institution(DomainModel):
     website: str | None = None
     net_price_calculator_url: str | None = None
     ownership: Ownership = Ownership.UNKNOWN
+    test_policy: TestPolicy = TestPolicy.UNKNOWN
+    test_policy_source_url: str | None = None
+    test_policy_source_date: date | None = None
+    residency_selectivity: ResidencySelectivity = ResidencySelectivity.UNKNOWN
+    nonresident_cap_percent: float | None = Field(default=None, ge=0, le=100)
+    residency_policy_source_url: str | None = None
+    residency_policy_source_date: date | None = None
+    automatic_admission_policy: str | None = None
+    major_admission_type: MajorAdmissionType = MajorAdmissionType.UNKNOWN
+    major_admission_note: str | None = None
+    major_policy_source_url: str | None = None
+    major_policy_source_date: date | None = None
     main_campus: bool
     predominant_degree: int | None = None
     highest_degree: int

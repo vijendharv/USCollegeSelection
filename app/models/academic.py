@@ -67,6 +67,11 @@ class GPAScope(StrEnum):
     YEAR = "year"
     TERM = "term"
     CORE = "core"
+    STEM = "stem"
+    TENTH_ELEVENTH = "tenth_eleventh"
+    UC_UNWEIGHTED = "uc_unweighted"
+    UC_CAPPED_WEIGHTED = "uc_capped_weighted"
+    INTERNAL_WEIGHTED = "internal_weighted"
     OTHER = "other"
 
 
@@ -114,6 +119,8 @@ class Course(DomainModel):
     credits_earned: Decimal | None = Field(default=None, ge=0)
     status: CourseStatus = CourseStatus.UNKNOWN
     source: RecordSource = RecordSource.MANUAL
+    uc_a_g_area: Annotated[str, StringConstraints(min_length=1, max_length=8)] | None = None
+    uc_honors_eligible: bool | None = None
 
     @model_validator(mode="after")
     def validate_credits(self) -> Self:
@@ -192,3 +199,17 @@ class AcademicRecord(DomainModel):
         ):
             raise ValueError("class_rank cannot exceed class_size")
         return self
+
+
+class CalculatedGPA(DomainModel):
+    scope: GPAScope
+    value: Decimal | None = Field(default=None, ge=0)
+    scale: Decimal = Field(default=Decimal(4), gt=0)
+    courses_used: int = Field(default=0, ge=0)
+    caveat: str | None = None
+
+
+class PreparationSignal(DomainModel):
+    code: ShortText
+    level: Annotated[str, StringConstraints(pattern="^(strength|attention|unknown)$")]
+    message: Annotated[str, StringConstraints(min_length=1, max_length=300)]

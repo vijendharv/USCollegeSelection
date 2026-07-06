@@ -18,8 +18,13 @@ from app.models import (
     GPARecord,
     GPAType,
     Institution,
+    Ownership,
+    ResidencySelectivity,
     StudentPreferences,
     StudentProfile,
+)
+from app.models import (
+    TestPolicy as InstitutionTestPolicy,
 )
 from app.models import (
     TestScore as StudentTestScore,
@@ -110,7 +115,7 @@ def gpa_benchmark(
 @pytest.mark.parametrize(
     ("rate", "sat", "expected"),
     [
-        (0.50, 1410, AdmissionCategory.SAFETY_LIKELY),
+        (0.50, 1410, AdmissionCategory.TARGET),
         (0.499, 1410, AdmissionCategory.TARGET),
         (0.60, 1400, AdmissionCategory.TARGET),
         (0.60, 1200, AdmissionCategory.TARGET),
@@ -177,14 +182,14 @@ def test_course_rigor_is_reported_separately_from_gpa() -> None:
 def test_act_alone_supports_classification() -> None:
     result = classify_admission(profile(act=33), institution(), dataset())
 
-    assert result.category is AdmissionCategory.SAFETY_LIKELY
+    assert result.category is AdmissionCategory.TARGET
     assert "act_above" in {rule.code for rule in result.triggered_rules}
 
 
 def test_stronger_of_sat_and_act_is_used() -> None:
     result = classify_admission(profile(sat=1100, act=33), institution(), dataset())
 
-    assert result.category is AdmissionCategory.SAFETY_LIKELY
+    assert result.category is AdmissionCategory.TARGET
     assert "act_above" in {rule.code for rule in result.triggered_rules}
     assert "sat_below" not in {rule.code for rule in result.triggered_rules}
     assert "weaker submitted test comparison" in result.excluded_factors
@@ -217,6 +222,31 @@ def test_result_exposes_sources_rules_missing_inputs_and_confidence() -> None:
         "https://example.edu/admissions",
     ]
     assert {rule.code for rule in result.triggered_rules} >= {"gpa_above", "sat_above"}
+
+
+def test_test_blind_school_excludes_scores() -> None:
+    school = institution()
+    school.test_policy = InstitutionTestPolicy.BLIND
+    result = classify_admission(profile(sat=1500), school, dataset())
+
+    assert result.category is AdmissionCategory.INSUFFICIENT_DATA
+    assert any("does not use" in value for value in result.excluded_factors)
+
+
+def test_high_oos_selectivity_downgrades_public_school_once() -> None:
+    school = institution()
+    school.ownership = Ownership.PUBLIC
+    school.state = "NC"
+    school.residency_selectivity = ResidencySelectivity.HIGH
+    applicant = profile(
+        sat=1450,
+        gpa=("3.9", "4.0", GPAType.UNWEIGHTED),
+    )
+    applicant.preferences.residence_state = "WA"
+    result = classify_admission(applicant, school, dataset(), gpa_benchmark())
+
+    assert result.category is AdmissionCategory.TARGET
+    assert "out_of_state_public_adjustment" in {rule.code for rule in result.triggered_rules}
 
 
 def test_gpa_benchmark_rejects_unknown_type() -> None:
