@@ -40,11 +40,19 @@ def test_discovers_and_downloads_current_institution_archive(tmp_path: Path) -> 
     assert download.archive_path.read_text(encoding="utf-8") == "archive-bytes"
 
 
-def test_discovery_rejects_missing_or_ambiguous_archive_links(tmp_path: Path) -> None:
+def test_discovery_rejects_missing_archive_links(tmp_path: Path) -> None:
     network = FakeNetworkClient({DATA_PAGE: "<html>No archive</html>"})
 
-    with pytest.raises(NetworkError, match="exactly one"):
+    with pytest.raises(NetworkError, match=r"matches=\[\]"):
         ScorecardDataSource(network, tmp_path).discover_latest_archive_url()
+
+
+def test_discovery_selects_newest_when_page_contains_multiple_archives(tmp_path: Path) -> None:
+    older = ARCHIVE_URL.replace("06102026", "06102025")
+    html = page_with_link(older) + page_with_link(ARCHIVE_URL)
+    source = ScorecardDataSource(FakeNetworkClient({DATA_PAGE: html}), tmp_path)
+
+    assert source.discover_latest_archive_url() == ARCHIVE_URL
 
 
 def test_discovers_and_downloads_current_field_archive(tmp_path: Path) -> None:

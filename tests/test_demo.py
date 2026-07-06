@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import cast
 
@@ -9,10 +10,17 @@ from openpyxl import load_workbook
 from pypdf import PdfReader
 
 from app.cli import main
-from app.demo import run_offline_demo
+from app.demo import _data_quality_warnings, run_offline_demo
 
 PROFILE = Path("examples/demo-student-profile.json")
 FIXTURE = Path("tests/fixtures/scorecard/institutions.csv")
+
+
+def test_program_data_vintage_warning_appears_after_eighteen_months() -> None:
+    warnings = _data_quality_warnings(date(2027, 1, 1), 2024)
+
+    assert warnings
+    assert "more than 18 months older" in warnings[0]
 
 
 def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) -> None:
@@ -41,10 +49,13 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
     assert "Harvard University" in pdf_text
     assert workbook.sheetnames[0] == "Student-Supplied Colleges"
     assert len(report["schools"]) == 5
-    assert report["fit_methodology_version"] == "1.3"
+    assert report["fit_methodology_version"] == "1.4"
+    assert report["program_data_vintages"]
+    assert "data_quality_warnings" in report
     assert report["major_rankings"]
     assert report["student_supplied_rankings"]
     assert report["category_thresholds"]
+    assert any(item["threshold_relaxed"] for item in report["category_thresholds"])
     assert all(
         70 <= float(item["applied_threshold"]) <= 80 for item in report["category_thresholds"]
     )

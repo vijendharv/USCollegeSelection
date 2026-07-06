@@ -3,7 +3,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from app.models import BudgetType, RecommendationSettings, StudentPreferences, ThresholdMode
+from app.models import (
+    BudgetType,
+    HolisticProfile,
+    HolisticReviewStatus,
+    RecommendationSettings,
+    StudentPreferences,
+    ThresholdMode,
+)
 
 
 def test_preferences_normalize_states_and_remove_duplicates() -> None:
@@ -47,6 +54,10 @@ def test_recommendation_settings_default_to_adaptive_80_to_70() -> None:
     assert settings.adaptive_floor == 70
     assert settings.minimum_results_per_category == 5
     assert settings.maximum_results_per_category == 10
+
+
+def test_holistic_evidence_defaults_to_needs_review() -> None:
+    assert HolisticProfile().review_status is HolisticReviewStatus.NEEDS_REVIEW
 
 
 @pytest.mark.parametrize(

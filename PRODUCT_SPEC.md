@@ -246,14 +246,16 @@ Hard filters and soft preferences must be visibly different. The app must ask fo
 3. Classification confidence.
 4. Recommendation rank within the admissions category after the fit floor and program-strength ordering.
 5. Applied student-fit threshold for that major and admissions category.
-6. City and state.
-7. Intended-major availability.
-8. Overall acceptance rate.
-9. National student-major fit position and comparison population.
-10. National program-strength rank, score, confidence, and comparison population.
-11. Published GPA and test-score profile, clearly labeling unavailable benchmarks.
-12. Tuition, total cost of attendance, and net price.
-13. Application deadlines.
+6. Whether the category threshold was relaxed below its configured initial value.
+7. City and state.
+8. Intended-major availability.
+9. Overall acceptance rate.
+10. National student-major fit position and comparison population.
+11. National program-strength rank, score, confidence, and comparison population.
+12. Normalized top-percent positions for student-major fit and program strength.
+13. Published GPA and test-score profile, clearly labeling unavailable benchmarks.
+14. Tuition, total cost of attendance, and net price.
+15. Application deadlines.
 
 ### 10.2 Optional columns
 

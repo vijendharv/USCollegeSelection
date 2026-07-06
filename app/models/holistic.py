@@ -33,6 +33,6 @@ class HolisticReviewStatus(StrEnum):
 class HolisticProfile(DomainModel):
     """Reviewable themes and facts confirmed from a résumé or manual entry."""
 
-    review_status: HolisticReviewStatus = HolisticReviewStatus.CONFIRMED
+    review_status: HolisticReviewStatus = HolisticReviewStatus.NEEDS_REVIEW
     themes: list[str] = Field(default_factory=list)
     activities: list[Activity] = Field(default_factory=list)

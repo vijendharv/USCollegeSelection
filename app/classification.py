@@ -200,7 +200,10 @@ def _describe_rigor(
         rules.append(
             ClassificationRule(
                 code="advanced_rigor_observed",
-                message="Confirmed advanced courses are reported separately from GPA weighting.",
+                message=(
+                    "Confirmed advanced courses are contextual only and do not currently affect "
+                    "the admissions classification or GPA weighting."
+                ),
                 student_value=str(count),
                 school_benchmark="not available",
             )

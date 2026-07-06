@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import shutil
 import tempfile
 import zipfile
 from collections.abc import Sequence
@@ -25,6 +24,7 @@ from app.models import (
 from app.storage.contracts import StorageError
 
 SCHEMA_VERSION = 3
+_MAX_EXTRACTED_CSV_BYTES = 2_000_000_000
 
 _CIP_FAMILIES = {
     "01": "Agriculture, Agriculture Operations, and Related Sciences",
@@ -394,9 +394,18 @@ class DuckDBCollegeStore:
             if len(members) != 1:
                 raise StorageError("Expected exactly one CSV in source archive")
             member = members[0]
+            if archive.getinfo(member).file_size > _MAX_EXTRACTED_CSV_BYTES:
+                raise StorageError(f"CSV archive member exceeds {_MAX_EXTRACTED_CSV_BYTES:,} bytes")
             csv_path = destination / output_name
             with archive.open(member) as source, csv_path.open("wb") as output:
-                shutil.copyfileobj(source, output)
+                written = 0
+                while chunk := source.read(1024 * 1024):
+                    written += len(chunk)
+                    if written > _MAX_EXTRACTED_CSV_BYTES:
+                        raise StorageError(
+                            f"Extracted CSV exceeds {_MAX_EXTRACTED_CSV_BYTES:,} bytes"
+                        )
+                    output.write(chunk)
             return csv_path, member
 
     @staticmethod
@@ -630,6 +639,13 @@ class DuckDBCollegeStore:
         missing = sorted(required - columns)
         if missing:
             raise StorageError(f"Scorecard field data is missing required columns: {missing}")
+        DuckDBCollegeStore._validate_cip_format(
+            connection,
+            table="scorecard_field_raw",
+            eligibility="TRY_CAST(CREDLEV AS INTEGER) = 3",
+            valid_length="BETWEEN 1 AND 4",
+            label="Scorecard field-of-study",
+        )
         connection.execute(
             """
             INSERT INTO program_offerings
@@ -687,6 +703,13 @@ class DuckDBCollegeStore:
         missing = sorted(required - columns)
         if missing:
             raise StorageError(f"IPEDS completions data is missing required columns: {missing}")
+        DuckDBCollegeStore._validate_cip_format(
+            connection,
+            table="ipeds_program_raw",
+            eligibility=("TRY_CAST(AWLEVEL AS INTEGER) = 5 AND TRY_CAST(MAJORNUM AS INTEGER) = 1"),
+            valid_length="= 6",
+            label="IPEDS completions",
+        )
         connection.execute(
             """
             INSERT INTO program_offerings
@@ -714,6 +737,51 @@ class DuckDBCollegeStore:
             [version_id],
         )
         connection.execute("DROP TABLE ipeds_program_raw")
+
+    @staticmethod
+    def _validate_cip_format(
+        connection: duckdb.DuckDBPyConnection,
+        *,
+        table: str,
+        eligibility: str,
+        valid_length: str,
+        label: str,
+    ) -> None:
+        counts = connection.execute(
+            f"""
+            SELECT COUNT(*), COUNT(*) FILTER (
+                WHERE LENGTH(REGEXP_REPLACE(TRIM(CIPCODE), '[^0-9]', '', 'g'))
+                      {valid_length}
+            )
+            FROM {table}
+            WHERE {eligibility}
+            """
+        ).fetchone()
+        if counts is None:
+            raise StorageError(f"Could not validate {label} CIP format")
+        total, valid = counts
+        if total == 0:
+            raise StorageError(f"{label} contains no relevant bachelor's program rows")
+        if valid / total >= 0.5:
+            return
+        rejected = [
+            row[0]
+            for row in connection.execute(
+                f"""
+                SELECT DISTINCT CIPCODE
+                FROM {table}
+                WHERE {eligibility}
+                  AND NOT (
+                    LENGTH(REGEXP_REPLACE(TRIM(CIPCODE), '[^0-9]', '', 'g')) {valid_length}
+                  )
+                LIMIT 5
+                """
+            ).fetchall()
+        ]
+        raise StorageError(
+            f"{label} CIP format validation retained only {valid} of {total} relevant rows; "
+            f"rejected samples: {rejected}"
+        )
 
     @staticmethod
     def _validate_database(

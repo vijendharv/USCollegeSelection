@@ -38,7 +38,24 @@ def assess_profile(profile: StudentProfile) -> ProfileAssessment:
     high_school = profile.high_school
     preferences = profile.preferences
 
-    if profile.holistic.review_status is HolisticReviewStatus.NEEDS_REVIEW:
+    for index, major in enumerate(preferences.intended_majors):
+        if major.strip().casefold() in {"engineering", "business"}:
+            warnings.append(
+                _warning(
+                    "intended_major_too_broad",
+                    (
+                        f"{major} is too broad for exact six-digit program matching; choose a "
+                        "specific field such as Biomedical Engineering, Mechanical Engineering, "
+                        "Finance, or Accounting."
+                    ),
+                    f"preferences.intended_majors.{index}",
+                    WarningSeverity.BLOCKING,
+                )
+            )
+
+    if profile.holistic.review_status is HolisticReviewStatus.NEEDS_REVIEW and (
+        profile.holistic.themes or profile.holistic.activities
+    ):
         warnings.append(
             _warning(
                 "holistic_confirmation_required",

@@ -56,7 +56,10 @@ def _profile() -> StudentProfile:
                 residence_state="CA",
                 intended_majors=["Biology", "Biomedical Engineering"],
             ),
-            "holistic": HolisticProfile(themes=["healthcare", "research"]),
+            "holistic": HolisticProfile(
+                review_status=HolisticReviewStatus.CONFIRMED,
+                themes=["healthcare", "research"],
+            ),
         }
     )
 
@@ -122,7 +125,9 @@ def test_ranking_is_independent_of_candidate_input_order() -> None:
 
 def test_resume_context_does_not_change_admissions_categories() -> None:
     schools = _schools()
-    without_resume = _profile().model_copy(update={"holistic": HolisticProfile()})
+    without_resume = _profile().model_copy(
+        update={"holistic": HolisticProfile(review_status=HolisticReviewStatus.CONFIRMED)}
+    )
 
     ranked_with, _ = rank_major_fits(_profile(), schools, _offerings())
     ranked_without, _ = rank_major_fits(without_resume, schools, _offerings())
@@ -220,6 +225,11 @@ def test_national_rank_covers_exact_programs_across_categories() -> None:
     assert {item.national_rank_total for item in biology} == {2}
     assert sorted(item.national_rank for item in biology) == [1, 2]
     assert {item.national_program_strength_rank_total for item in biology} == {2}
+    assert sorted(
+        item.national_fit_top_percent
+        for item in biology
+        if item.national_fit_top_percent is not None
+    ) == [50, 100]
 
 
 def test_program_strength_precedes_a_small_fit_advantage_within_category() -> None:

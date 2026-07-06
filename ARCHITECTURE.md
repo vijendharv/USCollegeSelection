@@ -588,6 +588,21 @@ Deliverables:
 
 Complete when thresholds adapt independently, no group crosses its configured floor, fixed mode remains available, sparse groups are not padded, and automated plus generated-artifact checks verify threshold visibility.
 
+#### Milestone 1.13 — Audit correctness and data hardening
+
+Deliverables:
+
+- Use one shared in-state-aware comparable-cost rule in ranking and gap analysis.
+- Default structured résumé evidence to `needs_review` and require explicit confirmation before scoring.
+- Reject overly broad majors that cannot support defensible six-digit CIP matching.
+- Validate live CIP formats before loading and fail visibly on major source-format drift.
+- Select the newest matching Scorecard archive when multiple official links are present.
+- Guard decompressed CSV size, surface IPEDS source vintage, and warn about material vintage gaps.
+- Use diminishing returns for completion-volume evidence and publish normalized top-percent positions.
+- Mark relaxed adaptive thresholds and state explicitly that course rigor is contextual only.
+
+Complete when targeted regressions, the full suite, and a real-data smoke test pass, and JSON/PDF/XLSX expose the new methodology and data-quality context.
+
 ### Stage 2 — Documents
 
 - Add text-based and scanned PDF extraction.

@@ -96,6 +96,29 @@ def test_unconfirmed_resume_evidence_is_explicitly_flagged_for_review() -> None:
     assert warning.severity is WarningSeverity.WARNING
 
 
+def test_broad_major_requires_a_specific_program() -> None:
+    profile = StudentProfile(
+        high_school=complete_high_school(),
+        academic=AcademicRecord(
+            courses=[
+                Course(
+                    subject="Mathematics",
+                    name="AP Calculus AB",
+                    level=CourseLevel.AP,
+                    grade=Grade(original="A"),
+                )
+            ]
+        ),
+        preferences=complete_preferences().model_copy(update={"intended_majors": ["Engineering"]}),
+    )
+
+    assessment = assess_profile(profile)
+    warning = next(item for item in assessment.warnings if item.code == "intended_major_too_broad")
+
+    assert warning.severity is WarningSeverity.BLOCKING
+    assert assessment.ready_for_analysis is False
+
+
 def test_empty_partial_profile_returns_blocking_warnings() -> None:
     assessment = assess_profile(StudentProfile())
 
