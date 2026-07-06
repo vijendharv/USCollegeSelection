@@ -6,9 +6,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from app.classification import METHODOLOGY_VERSION, classify_admission
+from app.costs import comparable_cost
 from app.models.academic import CourseLevel
 from app.models.classification import AcademicStanding, ClassificationRule
-from app.models.college import DatasetVersion, Institution, Ownership
+from app.models.college import DatasetVersion, Institution
 from app.models.preferences import BudgetType
 from app.models.report import (
     CollegeReport,
@@ -186,7 +187,8 @@ def _cost_comparison(
             note="Student annual budget was not provided; cost remains visible but unscored.",
         )
 
-    cost, label = _comparable_cost(student, institution, budget_type)
+    comparison = comparable_cost(student, institution, budget_type)
+    cost, label = comparison.amount, comparison.label
     if cost is None:
         reason = (
             "No comparable published cost is available."
@@ -216,25 +218,6 @@ def _cost_comparison(
             else "Published cost exceeds the stated annual budget."
         ),
     )
-
-
-def _comparable_cost(
-    student: StudentProfile,
-    institution: Institution,
-    budget_type: BudgetType | None,
-) -> tuple[int | None, str]:
-    if budget_type is BudgetType.NET_PRICE:
-        return institution.average_net_price, "average net price"
-    if budget_type is BudgetType.PUBLISHED_COST:
-        if institution.cost_of_attendance is not None:
-            return institution.cost_of_attendance, "cost of attendance"
-        in_state = (
-            institution.ownership is Ownership.PUBLIC
-            and student.preferences.residence_state == institution.state
-        )
-        tuition = institution.tuition_in_state if in_state else institution.tuition_out_of_state
-        return tuition, "published tuition"
-    return None, ""
 
 
 def _preference_warnings(

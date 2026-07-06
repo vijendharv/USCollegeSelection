@@ -82,5 +82,7 @@ class CollegeReport(DomainModel):
     category_thresholds: list[CategoryThresholdResult] = Field(default_factory=list)
     consolidated_rankings: list[ConsolidatedFitResult] = Field(default_factory=list)
     fit_methodology_version: str | None = None
+    program_data_vintages: list[str] = Field(default_factory=list)
+    data_quality_warnings: list[str] = Field(default_factory=list)
     holistic_context: HolisticContext = Field(default_factory=HolisticContext)
     disclaimer: str

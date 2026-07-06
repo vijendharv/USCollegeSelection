@@ -58,11 +58,14 @@ class ScorecardDataSource:
             for href in parser.hrefs
             if pattern.search(urlparse(href).path)
         ]
-        if len(matches) != 1:
+        if not matches:
             raise NetworkError(
-                f"Expected exactly one current {label} archive on the College Scorecard page"
+                f"No current {label} archive matched on the College Scorecard page; matches=[]"
             )
-        return matches[0]
+        return max(
+            matches,
+            key=lambda url: (_release_date(Path(urlparse(url).path).name) or date.min, url),
+        )
 
     def download_latest(self) -> ScorecardDownload:
         return self._download(self.discover_latest_archive_url(), _INSTITUTION_ARCHIVE_PATTERN)

@@ -84,6 +84,8 @@ college-report.xlsx
 
 The JSON, PDF, and Excel workbook are generated from the same canonical report. Profiles must contain one to three intended majors in priority order. A college-major combination must have an exact six-digit CIP program match to enter the qualified pool. By default, each major and Safety / Likely, Target, Reach, or Insufficient Data category starts at an 80/100 fit threshold. Only a category with fewer than five options lowers its threshold, one point at a time, until it has five options or reaches 70. These values are configurable in the student JSON, and every output shows the threshold actually used. Qualified colleges are ordered by national program strength first and student fit second; the demo never samples randomly or takes schools alphabetically. Up to ten appear in each main category and the remainder appear in an addendum. Admissions categories remain institution-level. Student-supplied colleges are retained and shown in a separate table before generated recommendations.
 
+Use a specific intended major rather than a broad family such as `Engineering` or `Business`; exact program confirmation requires a reviewed six-digit CIP mapping. Structured résumé evidence defaults to `needs_review` and affects fit only after the profile explicitly sets it to `confirmed`.
+
 To test another student, copy the example, edit it, and supply its path:
 
 ```bash

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import app.storage.college as college_storage
 from app.models import InstitutionFilters, Ownership
 from app.storage import DuckDBCollegeStore, StorageError
 
@@ -166,3 +167,43 @@ def test_read_only_store_cannot_refresh(tmp_path: Path) -> None:
 
     with pytest.raises(StorageError, match="read-only"):
         refresh_fixture(store, make_archive(tmp_path))
+
+
+def test_refresh_rejects_material_ipeds_cip_format_drift(tmp_path: Path) -> None:
+    database = tmp_path / "college.duckdb"
+    archive = make_archive(tmp_path)
+    malformed = tmp_path / "malformed-ipeds.csv"
+    malformed.write_text(
+        "UNITID,CIPCODE,MAJORNUM,AWLEVEL,CTOTALT\n"
+        "139755,invalid,1,5,100\n"
+        "166027,also-invalid,1,5,50\n",
+        encoding="utf-8",
+    )
+    field_archive = make_source_archive(
+        tmp_path, FIELD_FIXTURE, "fields-valid.zip", "Most-Recent-Cohorts-Field-of-Study.csv"
+    )
+    ipeds_archive = make_source_archive(tmp_path, malformed, "ipeds-malformed.zip", "C2024_a.csv")
+
+    with (
+        DuckDBCollegeStore(database, read_only=False) as store,
+        pytest.raises(StorageError, match="CIP format validation"),
+    ):
+        store.refresh_from_scorecard_zip(
+            archive,
+            source_url=SOURCE_URL,
+            retrieved_at=RETRIEVED_AT,
+            release_date=date(2026, 6, 10),
+            field_archive_path=field_archive,
+            ipeds_archive_path=ipeds_archive,
+            minimum_eligible_institutions=6,
+        )
+
+
+def test_extract_rejects_oversized_decompressed_csv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive = make_archive(tmp_path)
+    monkeypatch.setattr(college_storage, "_MAX_EXTRACTED_CSV_BYTES", 10)
+
+    with pytest.raises(StorageError, match="exceeds"):
+        DuckDBCollegeStore._extract_csv(archive, tmp_path, "output.csv")

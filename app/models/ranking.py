@@ -34,8 +34,10 @@ class MajorFitResult(DomainModel):
     rank: int = Field(ge=1)
     national_rank: int | None = Field(default=None, ge=1)
     national_rank_total: int = Field(default=0, ge=0)
+    national_fit_top_percent: Decimal | None = Field(default=None, ge=0, le=100)
     national_program_strength_rank: int | None = Field(default=None, ge=1)
     national_program_strength_rank_total: int = Field(default=0, ge=0)
+    national_program_strength_top_percent: Decimal | None = Field(default=None, ge=0, le=100)
     applied_fit_threshold: Decimal | None = Field(default=None, ge=0, le=100)
     overall_score: Decimal = Field(ge=0, le=100)
     confidence: FitConfidence
@@ -64,6 +66,7 @@ class CategoryThresholdResult(DomainModel):
     qualified_candidates: int = Field(ge=0)
     selected_candidates: int = Field(ge=0)
     addendum_candidates: int = Field(ge=0)
+    threshold_relaxed: bool
 
 
 class ConsolidatedFitResult(DomainModel):

@@ -50,6 +50,7 @@
     ]
   },
   "holistic": {
+    "review_status": "confirmed",
     "themes": [
       "computing",
       "technology",

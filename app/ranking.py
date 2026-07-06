@@ -6,10 +6,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
+from app.costs import comparable_cost
 from app.models import (
     AcademicStanding,
     AdmissionCategory,
-    BudgetType,
     ConsolidatedFitResult,
     FitComponent,
     FitConfidence,
@@ -20,7 +20,7 @@ from app.models import (
     StudentProfile,
 )
 
-FIT_METHODOLOGY_VERSION = "1.3"
+FIT_METHODOLOGY_VERSION = "1.4"
 
 _WEIGHTS = {
     "Academic fit": Decimal("30"),
@@ -174,10 +174,18 @@ def _add_national_ranks(
             update={
                 "national_rank": updates[(item.unit_id, item.intended_major)][0],
                 "national_rank_total": updates[(item.unit_id, item.intended_major)][1],
+                "national_fit_top_percent": _top_percent(
+                    updates[(item.unit_id, item.intended_major)][0],
+                    updates[(item.unit_id, item.intended_major)][1],
+                ),
                 "national_program_strength_rank": updates[(item.unit_id, item.intended_major)][2],
                 "national_program_strength_rank_total": updates[
                     (item.unit_id, item.intended_major)
                 ][3],
+                "national_program_strength_top_percent": _top_percent(
+                    updates[(item.unit_id, item.intended_major)][2],
+                    updates[(item.unit_id, item.intended_major)][3],
+                ),
             }
         )
         for item in category_ranked
@@ -326,7 +334,12 @@ def _major_component(major: str, offerings: list[ProgramOffering] | None) -> _Ma
     if six:
         completions = sum(item.completion_count or 0 for item in six)
         four_outcome = max(four, key=_program_outcome_sort, default=None)
-        score = Decimal(70) + min(Decimal(15), Decimal(completions) / Decimal(5))
+        completion_bonus = (
+            Decimal(15) * Decimal(completions) / (Decimal(completions) + Decimal(20))
+            if completions
+            else Decimal(0)
+        )
+        score = Decimal(70) + completion_bonus
         if four_outcome and four_outcome.median_earnings_1yr is not None:
             score += _earnings_score(four_outcome.median_earnings_1yr, maximum=Decimal(15))
         component = FitComponent(
@@ -406,7 +419,7 @@ def _preference_component(student: StudentProfile, school: SchoolReport) -> FitC
         evidence.append("no state preference")
 
     if preferences.annual_budget is not None:
-        cost = _comparable_cost(student, school)
+        cost = comparable_cost(student, school.institution).amount
         if cost is not None:
             scores.append(Decimal(100 if Decimal(cost) <= preferences.annual_budget else 20))
             evidence.append("published cost compared with stated budget")
@@ -550,16 +563,6 @@ def _earnings_score(value: int, *, maximum: Decimal) -> Decimal:
     return normalized * maximum
 
 
-def _comparable_cost(student: StudentProfile, school: SchoolReport) -> int | None:
-    institution = school.institution
-    budget_type = student.preferences.budget_type
-    if budget_type is BudgetType.NET_PRICE:
-        return institution.average_net_price
-    if budget_type is BudgetType.PUBLISHED_COST:
-        return institution.cost_of_attendance or institution.tuition_out_of_state
-    return None
-
-
 def _missing(name: str, value: str) -> FitComponent:
     return FitComponent(
         name=name,
@@ -572,3 +575,9 @@ def _missing(name: str, value: str) -> FitComponent:
 
 def _round(value: Decimal) -> Decimal:
     return value.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+
+
+def _top_percent(rank: int | None, total: int) -> Decimal | None:
+    if rank is None or total == 0:
+        return None
+    return _round(Decimal(rank) / Decimal(total) * 100)

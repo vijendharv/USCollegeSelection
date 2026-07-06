@@ -1,6 +1,6 @@
 # Student-major fit scoring methodology
 
-**Current fit methodology version:** 1.3
+**Current fit methodology version:** 1.4
 
 ## 1. Purpose and boundaries
 
@@ -61,7 +61,7 @@ Academic fit uses only compatible comparisons produced by the admissions classif
 | Within the published range | 70 |
 | Below the published range | 25 |
 
-When multiple compatible signals exist, their scores are averaged. Supported signals currently include:
+The classifier chooses the most favorable compatible submitted comparison within each evidence type (for example SAT versus ACT), then the academic-fit component averages the selected evidence types. Final admissions categorization remains conservative across those evidence types: any below-range signal produces Reach, while Safety / Likely requires every included academic signal to be above range and the institution to meet the acceptance-rate rule. Supported signals currently include:
 
 - unweighted GPA against a compatible unweighted GPA range;
 - weighted GPA against a compatible weighted GPA range;
@@ -80,9 +80,11 @@ Six-digit IPEDS completion data confirms exact bachelor-program availability. Th
 
 ```text
 70
-+ min(15, bachelor's completions / 5)
++ 15 x completions / (completions + 20)
 + up to 15 points from four-digit field earnings
 ```
+
+The completion term has diminishing returns. It confirms that the exact program operates at meaningful scale without treating enrollment volume as a linear quality measure.
 
 The result is capped at 100. The earnings bonus normalizes one-year median field earnings from $20,000 to $100,000:
 
@@ -219,7 +221,7 @@ Exact programs are ordered by:
 2. program-strength score; and
 3. stable institution identifier.
 
-Every ordinal is accompanied by its comparison population, for example `25 of 600`.
+Every ordinal is accompanied by its comparison population, for example `25 of 600`, and a normalized top-percent position so ranks from differently sized major populations can be compared without hiding the denominator.
 
 ## 12. Main recommendations and addendum
 
@@ -236,6 +238,8 @@ Qualification is adaptive and independent for every intended-major and admission
 4. Never lower a group that already has enough options.
 
 The student JSON can set `threshold_mode` to `fixed` or `adaptive` and configure `initial_fit_threshold`, `adaptive_floor`, `minimum_results_per_category`, and `maximum_results_per_category` under `preferences.recommendation_settings`. The applied threshold and candidate counts are stored for every group and displayed in JSON, PDF, and Excel. A group may still return fewer than the requested minimum when fewer exact-program candidates meet its configured floor.
+
+Every group whose applied threshold is below its initial value is explicitly marked as relaxed.
 
 Within every intended-major and admissions-category group, qualified colleges are ordered by national program-strength rank before student fit. Up to the configured category cap, normally ten, appear in the main recommendations. Remaining qualified colleges appear in the JSON, PDF, and Excel addendum.
 

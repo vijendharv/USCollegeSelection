@@ -11,6 +11,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from app.data import IPEDS_COMPLETIONS_YEAR
 from app.exporting import export_college_report
 from app.models import (
     AdmissionCategory,
@@ -179,6 +180,16 @@ def run_offline_demo(
                 result for result in consolidated_rankings if result.unit_id in selected_ids
             ][:10],
             "fit_methodology_version": FIT_METHODOLOGY_VERSION,
+            "program_data_vintages": [
+                "College Scorecard field-of-study "
+                + (
+                    dataset.release_date.isoformat() if dataset.release_date else "date unavailable"
+                ),
+                f"IPEDS Completions {IPEDS_COMPLETIONS_YEAR}",
+            ],
+            "data_quality_warnings": _data_quality_warnings(
+                dataset.release_date, IPEDS_COMPLETIONS_YEAR
+            ),
         }
     )
 
@@ -232,6 +243,18 @@ def _load_profile(path: Path) -> StudentProfile:
         return StudentProfile.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError, ValueError, json.JSONDecodeError) as exc:
         raise DemoError(f"Student profile is invalid: {path}") from exc
+
+
+def _data_quality_warnings(scorecard_release: date | None, ipeds_year: int) -> list[str]:
+    if scorecard_release is None:
+        return []
+    age_days = (scorecard_release - date(ipeds_year, 12, 31)).days
+    if age_days <= 548:
+        return []
+    return [
+        f"Program availability uses IPEDS {ipeds_year}, which is more than 18 months older "
+        f"than the College Scorecard release dated {scorecard_release.isoformat()}."
+    ]
 
 
 def _database_is_healthy(path: Path) -> bool:
@@ -301,6 +324,7 @@ def _partition_major_rankings(
                     qualified_candidates=len(qualified),
                     selected_candidates=min(len(qualified), schools_per_category),
                     addendum_candidates=max(0, len(qualified) - schools_per_category),
+                    threshold_relaxed=applied < settings.initial_fit_threshold,
                 )
             )
     return selected, addendum, thresholds
@@ -330,8 +354,10 @@ def _merge_national_ranks(
         (item.unit_id, item.intended_major): (
             item.national_rank,
             item.national_rank_total,
+            item.national_fit_top_percent,
             item.national_program_strength_rank,
             item.national_program_strength_rank_total,
+            item.national_program_strength_top_percent,
         )
         for item in nationwide_rankings
     }
@@ -340,10 +366,14 @@ def _merge_national_ranks(
             update={
                 "national_rank": national[(item.unit_id, item.intended_major)][0],
                 "national_rank_total": national[(item.unit_id, item.intended_major)][1],
-                "national_program_strength_rank": national[(item.unit_id, item.intended_major)][2],
+                "national_program_strength_rank": national[(item.unit_id, item.intended_major)][3],
                 "national_program_strength_rank_total": national[
                     (item.unit_id, item.intended_major)
-                ][3],
+                ][4],
+                "national_fit_top_percent": national[(item.unit_id, item.intended_major)][2],
+                "national_program_strength_top_percent": national[
+                    (item.unit_id, item.intended_major)
+                ][5],
             }
         )
         for item in local_rankings

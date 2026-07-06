@@ -59,7 +59,7 @@ def test_student_supplied_colleges_are_separated_at_top() -> None:
 
     assert workbook.sheetnames[0] == "Student-Supplied Colleges"
     assert sheet["A2"].value == report.student_profile.preferences.existing_schools[0]
-    assert sheet["O2"].value == "Matched"
+    assert sheet["Q2"].value == "Matched"
 
 
 def test_excel_escapes_formula_injection_text() -> None:

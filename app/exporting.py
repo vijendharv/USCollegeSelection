@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from html import escape
 from io import BytesIO
 from typing import Any
@@ -133,6 +134,19 @@ def render_pdf(report: CollegeReport) -> bytes:
         Spacer(1, 12),
         Paragraph(_pdf_text(report.disclaimer), styles["Small"]),
     ]
+    if report.data_quality_warnings:
+        story.append(Spacer(1, 6))
+        story.extend(
+            Paragraph(f"Data note: {_pdf_text(value)}", styles["Small"])
+            for value in report.data_quality_warnings
+        )
+    if report.program_data_vintages:
+        story.append(
+            Paragraph(
+                "Program data: " + _pdf_text("; ".join(report.program_data_vintages)),
+                styles["Small"],
+            )
+        )
     story.extend(_pdf_thresholds(report, styles))
     story.extend(_pdf_student_supplied_colleges(report, styles))
     story.append(PageBreak())
@@ -283,10 +297,12 @@ def _student_supplied_colleges_sheet(workbook: Workbook, report: CollegeReport) 
         "Category Applied Fit Threshold",
         "National Program Strength Rank",
         "Program Strength Rank Population",
+        "National Program Strength Top Percent",
         "Program Strength Score",
         "Program Strength Confidence",
         "National Student-Major Fit Rank",
         "National Rank Population",
+        "National Student-Major Fit Top Percent",
         "Fit Score",
         "Fit Confidence",
         "Match Status",
@@ -325,10 +341,12 @@ def _student_supplied_colleges_sheet(workbook: Workbook, report: CollegeReport) 
                     else None,
                     ranking.national_program_strength_rank if ranking else None,
                     ranking.national_program_strength_rank_total if ranking else None,
+                    ranking.national_program_strength_top_percent if ranking else None,
                     float(ranking.program_strength_score) if ranking else None,
                     ranking.program_strength_confidence.value.title() if ranking else None,
                     ranking.national_rank if ranking else None,
                     ranking.national_rank_total if ranking else None,
+                    ranking.national_fit_top_percent if ranking else None,
                     float(ranking.overall_score) if ranking else None,
                     ranking.confidence.value.title() if ranking else None,
                     "Matched" if school else "Not found in current official dataset",
@@ -338,7 +356,7 @@ def _student_supplied_colleges_sheet(workbook: Workbook, report: CollegeReport) 
     _classification_colors(sheet, f"D2:D{max(2, sheet.max_row)}", column="D")
     _set_widths(
         sheet,
-        [30, 30, 24, 18, 24, 24, 28, 24, 22, 22, 26, 22, 12, 14, 34],
+        [30, 30, 24, 18, 24, 24, 28, 24, 22, 22, 22, 26, 22, 22, 12, 14, 34],
     )
 
 
@@ -352,10 +370,12 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "Applied Fit Threshold",
         "National Program Strength Rank",
         "Program Strength Rank Population",
+        "National Program Strength Top Percent",
         "Program Strength Score",
         "Program Strength Confidence",
         "National Student-Major Fit Rank",
         "National Rank Population",
+        "National Student-Major Fit Top Percent",
         "Fit Score",
         "Fit Confidence",
         "Program Offered",
@@ -383,10 +403,12 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 item.applied_fit_threshold,
                 item.national_program_strength_rank,
                 item.national_program_strength_rank_total,
+                item.national_program_strength_top_percent,
                 float(item.program_strength_score),
                 item.program_strength_confidence.value.title(),
                 item.national_rank,
                 item.national_rank_total,
+                item.national_fit_top_percent,
                 float(item.overall_score),
                 item.confidence.value.title(),
                 "Yes"
@@ -408,7 +430,7 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
             ]
         )
     _write_table_sheet(sheet, "MajorRankingsTable", headers, rows)
-    for column in (5, 8, 12, 15, 19, 20, 21, 22, 23):
+    for column in (5, 8, 9, 13, 14, 17, 21, 22, 23, 24, 25):
         for cell in sheet.iter_cols(min_col=column, max_col=column, min_row=2):
             for value in cell:
                 value.number_format = "0.0"
@@ -425,7 +447,9 @@ def _major_rankings_sheet(workbook: Workbook, report: CollegeReport) -> None:
             24,
             22,
             22,
+            22,
             26,
+            22,
             22,
             12,
             14,
@@ -455,10 +479,12 @@ def _addendum_sheet(workbook: Workbook, report: CollegeReport) -> None:
         "Applied Fit Threshold",
         "National Program Strength Rank",
         "Program Strength Rank Population",
+        "National Program Strength Top Percent",
         "Program Strength Score",
         "Program Strength Confidence",
         "National Student-Major Fit Rank",
         "National Fit Rank Population",
+        "National Student-Major Fit Top Percent",
         "Fit Score",
         "Fit Confidence",
     ]
@@ -471,10 +497,12 @@ def _addendum_sheet(workbook: Workbook, report: CollegeReport) -> None:
             item.applied_fit_threshold,
             item.national_program_strength_rank,
             item.national_program_strength_rank_total,
+            item.national_program_strength_top_percent,
             float(item.program_strength_score),
             item.program_strength_confidence.value.title(),
             item.national_rank,
             item.national_rank_total,
+            item.national_fit_top_percent,
             float(item.overall_score),
             item.confidence.value.title(),
         ]
@@ -482,7 +510,10 @@ def _addendum_sheet(workbook: Workbook, report: CollegeReport) -> None:
     ]
     _write_table_sheet(sheet, "AdditionalQualifiedCollegesTable", headers, rows)
     _classification_colors(sheet, f"C2:C{max(2, sheet.max_row)}", column="C")
-    _set_widths(sheet, [24, 32, 18, 30, 20, 28, 24, 22, 22, 26, 22, 12, 14])
+    _set_widths(
+        sheet,
+        [24, 32, 18, 30, 20, 28, 24, 22, 22, 22, 26, 22, 22, 12, 14],
+    )
 
 
 def _adaptive_thresholds_sheet(workbook: Workbook, report: CollegeReport) -> None:
@@ -499,6 +530,7 @@ def _adaptive_thresholds_sheet(workbook: Workbook, report: CollegeReport) -> Non
         "Qualified Candidates",
         "Selected Candidates",
         "Addendum Candidates",
+        "Threshold Relaxed",
     ]
     rows = [
         [
@@ -513,12 +545,13 @@ def _adaptive_thresholds_sheet(workbook: Workbook, report: CollegeReport) -> Non
             item.qualified_candidates,
             item.selected_candidates,
             item.addendum_candidates,
+            "Yes" if item.threshold_relaxed else "No",
         ]
         for item in report.category_thresholds
     ]
     _write_table_sheet(sheet, "AdaptiveThresholdsTable", headers, rows)
     _classification_colors(sheet, f"B2:B{max(2, sheet.max_row)}", column="B")
-    _set_widths(sheet, [24, 18, 14, 18, 18, 18, 20, 24, 22, 20, 20])
+    _set_widths(sheet, [24, 18, 14, 18, 18, 18, 20, 24, 22, 20, 20, 18])
 
 
 def _threshold_for(
@@ -731,10 +764,14 @@ def _sources_sheet(workbook: Workbook, report: CollegeReport) -> None:
                 "",
                 None,
                 report.fit_methodology_version,
-                "Exact-program pool with an 80-point fit floor; national program strength "
-                "precedes student fit within each category. Not a commercial prestige ranking.",
+                "Exact-program pool with per-category adaptive fit thresholds; national program "
+                "strength precedes student fit. Not a commercial prestige ranking.",
             ]
         )
+    for vintage in report.program_data_vintages:
+        rows.append(["Program data", _excel_text(vintage), "", None, "", "Source vintage"])
+    for warning in report.data_quality_warnings:
+        rows.append(["Data quality", "Source-vintage warning", "", None, "", _excel_text(warning)])
     seen: set[tuple[str, str | None, Any]] = set()
     for item in report.schools:
         for source in item.source_references:
@@ -886,7 +923,9 @@ def _pdf_summary(report: CollegeReport, styles: Any) -> PDFTable:
 def _pdf_thresholds(report: CollegeReport, styles: Any) -> list[Any]:
     if not report.category_thresholds:
         return []
-    data: list[list[Any]] = [["Major", "Category", "Initial", "Applied", "Floor", "Qualified"]]
+    data: list[list[Any]] = [
+        ["Major", "Category", "Initial", "Applied", "Floor", "Qualified", "Relaxed"]
+    ]
     for item in report.category_thresholds:
         data.append(
             [
@@ -896,11 +935,20 @@ def _pdf_thresholds(report: CollegeReport, styles: Any) -> list[Any]:
                 str(item.applied_threshold),
                 str(item.adaptive_floor),
                 item.qualified_candidates,
+                "Yes" if item.threshold_relaxed else "No",
             ]
         )
     table = PDFTable(
         data,
-        colWidths=[1.7 * inch, 1.25 * inch, 0.75 * inch, 0.75 * inch, 0.7 * inch, 0.85 * inch],
+        colWidths=[
+            1.45 * inch,
+            1.15 * inch,
+            0.65 * inch,
+            0.7 * inch,
+            0.6 * inch,
+            0.75 * inch,
+            0.65 * inch,
+        ],
         repeatRows=1,
     )
     table.setStyle(
@@ -982,16 +1030,17 @@ def _pdf_student_supplied_colleges(report: CollegeReport, styles: Any) -> list[A
                     _threshold_for(report, major, school.classification.category)
                     if school
                     else "-",
-                    (
-                        f"{ranking.national_program_strength_rank} of "
-                        f"{ranking.national_program_strength_rank_total}"
-                        if ranking and ranking.national_program_strength_rank is not None
-                        else "Not ranked"
+                    _pdf_rank(
+                        ranking.national_program_strength_rank if ranking else None,
+                        ranking.national_program_strength_rank_total if ranking else 0,
+                        ranking.national_program_strength_top_percent if ranking else None,
+                        styles,
                     ),
-                    (
-                        f"{ranking.national_rank} of {ranking.national_rank_total}"
-                        if ranking and ranking.national_rank is not None
-                        else "Not ranked"
+                    _pdf_rank(
+                        ranking.national_rank if ranking else None,
+                        ranking.national_rank_total if ranking else 0,
+                        ranking.national_fit_top_percent if ranking else None,
+                        styles,
                     ),
                 ]
             )
@@ -1076,16 +1125,17 @@ def _pdf_major_ranking_sections(report: CollegeReport, styles: Any) -> list[Any]
         for item in (value for value in report.major_rankings if value.intended_major == major):
             data.append(
                 [
-                    (
-                        f"{item.national_program_strength_rank} of "
-                        f"{item.national_program_strength_rank_total}"
-                        if item.national_program_strength_rank is not None
-                        else "Not ranked"
+                    _pdf_rank(
+                        item.national_program_strength_rank,
+                        item.national_program_strength_rank_total,
+                        item.national_program_strength_top_percent,
+                        styles,
                     ),
-                    (
-                        f"{item.national_rank} of {item.national_rank_total}"
-                        if item.national_rank is not None
-                        else "Not ranked"
+                    _pdf_rank(
+                        item.national_rank,
+                        item.national_rank_total,
+                        item.national_fit_top_percent,
+                        styles,
                     ),
                     item.rank,
                     (
@@ -1158,11 +1208,11 @@ def _pdf_addendum(report: CollegeReport, styles: Any) -> list[Any]:
     for item in report.addendum_rankings:
         data.append(
             [
-                (
-                    f"{item.national_program_strength_rank} of "
-                    f"{item.national_program_strength_rank_total}"
-                    if item.national_program_strength_rank is not None
-                    else "Not ranked"
+                _pdf_rank(
+                    item.national_program_strength_rank,
+                    item.national_program_strength_rank_total,
+                    item.national_program_strength_top_percent,
+                    styles,
                 ),
                 Paragraph(_pdf_text(item.institution_name), styles["Small"]),
                 Paragraph(_pdf_text(item.intended_major), styles["Small"]),
@@ -1211,8 +1261,8 @@ def _pdf_addendum(report: CollegeReport, styles: Any) -> list[Any]:
         PageBreak(),
         Paragraph("Addendum: additional qualified colleges", styles["SchoolTitle"]),
         Paragraph(
-            "These colleges met the 80-point fit floor but fell below the ten strongest "
-            "programs selected for their admissions category.",
+            "These colleges met their category's applied fit threshold but fell below the "
+            "strongest programs selected for their admissions category.",
             styles["Small"],
         ),
         Spacer(1, 8),
@@ -1271,6 +1321,18 @@ def _pdf_sources(sources: list[Any], styles: Any) -> list[Any]:
         for source in sources
     ]
     return _pdf_list("Sources", values, styles)
+
+
+def _pdf_rank(
+    rank: int | None,
+    total: int,
+    top_percent: Decimal | None,
+    styles: Any,
+) -> Any:
+    if rank is None:
+        return "Not ranked"
+    percent = f"<br/>(top {top_percent}%)" if top_percent is not None else ""
+    return Paragraph(f"{rank} of {total}{percent}", styles["Small"])
 
 
 def _pdf_footer(canvas: Any, document: Any) -> None:
