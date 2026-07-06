@@ -115,7 +115,7 @@ def gpa_benchmark(
 @pytest.mark.parametrize(
     ("rate", "sat", "expected"),
     [
-        (0.50, 1410, AdmissionCategory.TARGET),
+        (0.50, 1410, AdmissionCategory.SAFETY_LIKELY),
         (0.499, 1410, AdmissionCategory.TARGET),
         (0.60, 1400, AdmissionCategory.TARGET),
         (0.60, 1200, AdmissionCategory.TARGET),
@@ -182,14 +182,15 @@ def test_course_rigor_is_reported_separately_from_gpa() -> None:
 def test_act_alone_supports_classification() -> None:
     result = classify_admission(profile(act=33), institution(), dataset())
 
-    assert result.category is AdmissionCategory.TARGET
+    assert result.category is AdmissionCategory.SAFETY_LIKELY
     assert "act_above" in {rule.code for rule in result.triggered_rules}
+    assert "provisional_likely_test_only" in {rule.code for rule in result.triggered_rules}
 
 
 def test_stronger_of_sat_and_act_is_used() -> None:
     result = classify_admission(profile(sat=1100, act=33), institution(), dataset())
 
-    assert result.category is AdmissionCategory.TARGET
+    assert result.category is AdmissionCategory.SAFETY_LIKELY
     assert "act_above" in {rule.code for rule in result.triggered_rules}
     assert "sat_below" not in {rule.code for rule in result.triggered_rules}
     assert "weaker submitted test comparison" in result.excluded_factors
@@ -231,6 +232,29 @@ def test_test_blind_school_excludes_scores() -> None:
 
     assert result.category is AdmissionCategory.INSUFFICIENT_DATA
     assert any("does not use" in value for value in result.excluded_factors)
+
+
+def test_broad_access_school_can_be_provisional_likely_without_test_range() -> None:
+    school = institution(acceptance_rate=0.80)
+    school.sat_reading_25 = None
+    school.sat_reading_75 = None
+    school.sat_math_25 = None
+    school.sat_math_75 = None
+    school.act_composite_25 = None
+    school.act_composite_75 = None
+    result = classify_admission(profile(gpa=("3.6", "4.0", GPAType.UNWEIGHTED)), school, dataset())
+
+    assert result.category is AdmissionCategory.SAFETY_LIKELY
+    assert result.confidence is ClassificationConfidence.LOW
+    assert "provisional_likely_broad_access" in {rule.code for rule in result.triggered_rules}
+
+
+def test_test_blind_school_does_not_use_broad_access_fallback() -> None:
+    school = institution(acceptance_rate=0.90)
+    school.test_policy = InstitutionTestPolicy.BLIND
+    result = classify_admission(profile(gpa=("3.9", "4.0", GPAType.UNWEIGHTED)), school, dataset())
+
+    assert result.category is AdmissionCategory.INSUFFICIENT_DATA
 
 
 def test_high_oos_selectivity_downgrades_public_school_once() -> None:

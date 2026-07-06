@@ -90,6 +90,11 @@ def _school_report(
     if student.preferences.intended_majors:
         unknowns.append("intended-major preparation benchmark is not available")
     warnings = list(classification.excluded_factors)
+    warnings.extend(
+        rule.message
+        for rule in classification.triggered_rules
+        if rule.code.startswith("provisional_likely_")
+    )
     warnings.extend(_preference_warnings(student, institution, candidate.user_entered))
     if candidate.regional_baseline:
         warnings.append(
