@@ -78,10 +78,13 @@ def test_offline_demo_builds_fixture_database_and_all_outputs(tmp_path: Path) ->
     for item in report["major_rankings"]:
         category_ranks.setdefault(item["category"], []).append(item["rank"])
     assert all(ranks == sorted(ranks) for ranks in category_ranks.values())
-    assert (
-        report["major_rankings"][0]["institution_name"]
-        != "Arizona State University Campus Immersion"
+    asu = next(
+        item
+        for item in report["schools"]
+        if item["institution"]["name"] == "Arizona State University Campus Immersion"
     )
+    assert asu["classification"]["category"] == "safety_likely"
+    assert any("Provisional Safety / Likely" in warning for warning in asu["warnings"])
     assert "Major Rankings" in workbook.sheetnames
     assert "Adaptive Thresholds" in workbook.sheetnames
     major_headers = [cell.value for cell in workbook["Major Rankings"][1]]

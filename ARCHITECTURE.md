@@ -620,7 +620,8 @@ Deliverables:
 
 - Apply reviewable, sourced institution overrides for test policy, residency selectivity, and major-admission policy without pretending the federal dataset contains those fields.
 - Use the student's residence state to distinguish in-state and out-of-state public-school context; apply a one-category penalty only when a sourced policy marks nonresident selectivity high or very high.
-- Exclude tests from test-blind or primary-review-hidden schools and prevent test-only evidence from creating a Safety / Likely result.
+- Exclude tests from test-blind or primary-review-hidden schools. Permit a provisional Safety / Likely result when a submitted score is above the published range and overall acceptance is at least 50%, while keeping confidence at Medium when a compatible GPA benchmark is unavailable.
+- Permit a Low-confidence provisional Safety / Likely fallback when overall acceptance is at least 70%, the student has a confirmed cumulative unweighted GPA of at least 3.5 on a 4.0 scale, and school test/GPA ranges are unavailable; never apply this fallback to test-blind or primary-review-hidden schools.
 - Calculate transparent cumulative, core, STEM, grades 10-11, internal weighted, and UC GPA variants; publish caveats and leave UC GPA unavailable unless A-G and UC-honors eligibility are confirmed.
 - Report grade trend and intended-major preparation separately from the institution admission category.
 - Evaluate a visibly labeled regional baseline for supported residence states, beginning with Washington, while retaining user exclusions and preference warnings.

@@ -538,9 +538,10 @@ The MVP is complete when:
 18. Transcript parsing preserves AP/Honors designations and reported GPA types, and the classifier never compares incompatible weighted and unweighted GPA values as if they were equivalent.
 19. Transcript and résumé uploads accept PDF only; transcripts enforce 15 pages/15 MB and résumés enforce 6 pages/10 MB.
 20. The student's state is used for in-state/out-of-state public-school context and supported regional baselines; state never substitutes for academic fit.
-21. Test-blind and primary-review-hidden policies exclude SAT/ACT from classification, and test-only evidence cannot produce Safety / Likely.
-22. App-calculated GPA variants display their rule and caveats; UC GPA remains unavailable without confirmed A-G and UC-honors inputs.
-23. Every relaxed adaptive threshold is displayed as a recommendation caution in canonical JSON, PDF, and Excel.
+21. Test-blind and primary-review-hidden policies exclude SAT/ACT from classification. Test-only evidence may produce a clearly labeled provisional Safety / Likely only when the submitted score is above the published range and overall acceptance is at least 50%; confidence cannot exceed Medium without compatible GPA evidence.
+22. When school GPA and test ranges are unavailable, a school may be provisional Safety / Likely at Low confidence only when overall acceptance is at least 70% and the student has a confirmed cumulative unweighted GPA of at least 3.5/4.0. This fallback never applies to test-blind or primary-review-hidden schools.
+23. App-calculated GPA variants display their rule and caveats; UC GPA remains unavailable without confirmed A-G and UC-honors inputs.
+24. Every relaxed adaptive threshold is displayed as a recommendation caution in canonical JSON, PDF, and Excel.
 
 ## 19. Future enhancements
 

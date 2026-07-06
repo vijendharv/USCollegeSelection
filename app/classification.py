@@ -9,6 +9,7 @@ from app.models.academic import (
     CourseLevel,
     GPARecord,
     GPAScope,
+    GPAType,
     StandardizedTest,
     TestScore,
 )
@@ -31,9 +32,11 @@ from app.models.college import (
 from app.models.preferences import TestSubmissionPlan
 from app.models.student import StudentProfile
 
-METHODOLOGY_VERSION = "1.1"
+METHODOLOGY_VERSION = "1.2"
 HIGHLY_SELECTIVE_RATE = 0.20
 LIKELY_MINIMUM_RATE = 0.50
+BROAD_ACCESS_RATE = 0.70
+BROAD_ACCESS_GPA = Decimal("3.5")
 
 
 @dataclass(frozen=True)
@@ -74,6 +77,9 @@ def classify_admission(
 
     rules.extend(signal.rule for signal in signals)
     category = _category(rate, signals)
+    category = _apply_provisional_likely_context(
+        student, institution, category, rate, signals, rules
+    )
     category = _apply_residency_context(student, institution, category, rules, missing)
     confidence = _confidence(category, rate, signals, benchmark)
     source_dates = sorted(
@@ -306,6 +312,74 @@ def _apply_residency_context(
         AdmissionCategory.SAFETY_LIKELY: AdmissionCategory.TARGET,
         AdmissionCategory.TARGET: AdmissionCategory.REACH,
     }.get(category, category)
+
+
+def _apply_provisional_likely_context(
+    student: StudentProfile,
+    institution: Institution,
+    category: AdmissionCategory,
+    rate: float | None,
+    signals: list[_Signal],
+    rules: list[ClassificationRule],
+) -> AdmissionCategory:
+    """Recover useful likely results without pretending a missing GPA range exists."""
+    if rate is None or rate <= HIGHLY_SELECTIVE_RATE:
+        return category
+    test_above = any(
+        signal.standing is AcademicStanding.ABOVE and signal.rule.code.startswith(("sat_", "act_"))
+        for signal in signals
+    )
+    has_gpa_comparison = any(signal.rule.code.startswith("gpa_") for signal in signals)
+    if (
+        category is AdmissionCategory.TARGET
+        and rate >= LIKELY_MINIMUM_RATE
+        and test_above
+        and not has_gpa_comparison
+    ):
+        rules.append(
+            ClassificationRule(
+                code="provisional_likely_test_only",
+                message=(
+                    "Provisional Safety / Likely: the submitted test is above the published "
+                    "range and the overall acceptance rate is at least 50%, but a compatible "
+                    "admitted-student GPA range is unavailable."
+                ),
+                school_benchmark=f"acceptance rate {rate:.1%}",
+            )
+        )
+        return AdmissionCategory.SAFETY_LIKELY
+    if (
+        category is AdmissionCategory.INSUFFICIENT_DATA
+        and rate >= BROAD_ACCESS_RATE
+        and institution.test_policy not in {TestPolicy.BLIND, TestPolicy.NOT_VISIBLE_PRIMARY_REVIEW}
+    ):
+        gpa = _student_unweighted_four_point_gpa(student)
+        if gpa is not None and gpa >= BROAD_ACCESS_GPA:
+            rules.append(
+                ClassificationRule(
+                    code="provisional_likely_broad_access",
+                    message=(
+                        "Provisional Safety / Likely: the overall acceptance rate is at least "
+                        "70% and the student's confirmed unweighted 4.0-scale GPA is at least "
+                        "3.5; school-specific GPA and test ranges remain unavailable."
+                    ),
+                    student_value=f"{gpa}/4.0",
+                    school_benchmark=f"acceptance rate {rate:.1%}",
+                )
+            )
+            return AdmissionCategory.SAFETY_LIKELY
+    return category
+
+
+def _student_unweighted_four_point_gpa(student: StudentProfile) -> Decimal | None:
+    compatible = [
+        gpa.value
+        for gpa in student.academic.gpas
+        if gpa.scope is GPAScope.CUMULATIVE
+        and gpa.type is GPAType.UNWEIGHTED
+        and gpa.scale == Decimal(4)
+    ]
+    return max(compatible, default=None)
 
 
 def _confidence(
